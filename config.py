@@ -14,6 +14,7 @@ MDMIN_MAX_STEPS = 200
 NEB_POINTS = 20
 UNCERT_STEPS = 20
 EPS = 1e-10
+OUTPUT_BASIS = True
 
 # Parameters for Debugging
 # FIRE_MAX_STEPS = 200

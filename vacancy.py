@@ -2,6 +2,38 @@
 # Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
 
+# Python Modules
+import sys
+import re
+import json
+import math
+from collections import OrderedDict
+from scipy.optimize import fmin
+from scipy.interpolate import interp1d
+import numpy as np
+
+# ASE Modules
+try:
+    from ase.lattice import bulk
+    print 'Imported bulk from ase.lattice' # For ASE version 3.9
+except ImportError:
+    from ase.structure import bulk
+    print 'Imported bulk from ase.structure' # For ASE version <= 3.8
+from ase.optimize import FIRE, QuasiNewton, MDMin
+from ase.data import chemical_symbols
+from ase.data import reference_states
+from ase import Atoms, Atom
+from ase.io import write
+from ase.constraints import FixAtoms
+from ase.neb import NEB
+
+# KIM Modules
+from kimcalculator import *
+from kimservice import KIM_API_get_data_double
+
+# Load Configuration
+import config as C
+
 class Vacancy(object):
     # Class for calculating vacancy formation energy and relaxation volume
     def __init__(self, elem, model, lattice, latticeConsts):
@@ -12,36 +44,59 @@ class Vacancy(object):
         self._latticeConsts = np.array(latticeConsts)
         _printInputs()
 
-        self._atoms = _createAtoms()
+        self._basis = _createBasis()
+        self.FIREUncert = 0
+        sys.exit(0)
+        
+        # Determine size of the supercell
+        nAtoms = atoms.get_number_of_atoms()
+        factor = math.pow(8 / nAtoms, 0.333)
+        self.cellSizeMin = int(math.ceil(factor * C.CELL_SIZE_MIN))
+        self.cellSizeMax = self.cellSizeMin + 2
+        print 'Cell Size Min:', self.cellSizeMin
+        print 'Cell Size Max:', self.cellSizeMax
+        print 'Smallest System Size:', nAtoms * self.cellSizeMin**3
+        print 'Largest System Size:', nAtoms * self.cellSizeMax**3
+        print 'Model Cutoff:', KIM_API_get_data_double(atoms.calc.pkim, 'cutoff')[0]
+
+
+    def _createBasis():
+        # Create basic atoms
+        # Cache to local scope
+        lattice = self._lattice
+        latticeConsts = self._latticeConsts
+        # Check whether lattice is valid
+        supportedLattices = ['sc', 'fcc', 'bcc', 'diamond', 'hcp']
+        assert lattice in supportedLattices, 'lattice not supported'
+        # Create basis according to structure
         if lattice == 'hcp':
-            atoms = bulk(
-                elem,
-                a = latticeConsts[0],
-                c = latticeConsts[1],
-                crystalstructure = 'hcp',
+            # Create cubic lattice to accommodate MI_OPBC
+            a = latticeConsts[0]
+            c = latticeConsts[1]
+            rt3 = np.sqrt(3.0)
+            basis = Atoms(
+                elem + '4',
+                positions = np.array([
+                    [0.0, 0.0, 0.0],
+                    [0.5, 0.5 * rt3, 0.0],
+                    [0.5, 0.5 / 3.0 * rt3, 0.5],
+                    [0.0, 0.5 + 0.5 / 3.0 * rt3, 0.5]
+                ]),
+                cell = np.array([1, rt3, 1]),
+                pbc = [1, 1, 1]
             )
+            basis.set_cell(np.array([a, a * rt3, c]), scale_atoms = True)
         else:
-            atoms = bulk(
+            basis = bulk(
                 elem,
                 a = latticeConsts[0],
                 crystalstructure = lattice,
                 cubic = True,
             )
-        atoms.set_calculator(KIMCalculator(model))
-        self.atoms = atoms
-        self.FIREUncert = 0
-
-        # Determine size of the supercell
-        if C.DYNAMIC_CELL_SIZE == True:
-            nAtoms = atoms.get_number_of_atoms()
-            factor = math.pow(8 / nAtoms, 0.333)
-            self.cellSizeMin = int(math.ceil(factor * C.CELL_SIZE_MIN))
-            self.cellSizeMax = self.cellSizeMin + 2
-            print 'Cell Size Min:', self.cellSizeMin
-            print 'Cell Size Max:', self.cellSizeMax
-            print 'Smallest System Size:', nAtoms * self.cellSizeMin**3
-            print 'Largest System Size:', nAtoms * self.cellSizeMax**3
-            print 'Model Cutoff:', KIM_API_get_data_double(atoms.calc.pkim, 'cutoff')[0]
+        atoms.set_calculator(KIMCalculator(self._model))
+        if C.OUTPUT_BASIS == True:
+            write('basis.exyz', basis, format = 'extxyz')
+        return basis
 
     def _printInputs():
         # Print out the inputs
