@@ -1,0 +1,15 @@
+{
+    "description"   "Computes monovacancy migration and formation energy."
+    "disclaimer"    "Computes monovacancy migration and formation energy."
+    "domain"        "openkim.org"
+    "extended-id"   "VacancyFormationMigration__TD_554849987965_001"
+    "title"         "vacancy migration and formation energy for cubic and hcp crystals"
+    "executables"   ["runner" "test_template/runner"]
+    "source-citations"  "Jónsson, Hannes, Greg Mills, and Karsten W. Jacobsen. 'Nudged elastic band method for finding minimum energy paths of transitions.' Classical and quantum dynamics in condensed phase simulations 1 (1998): 385-404."
+    "kim-api-version" "1.6"
+    "pipeline-api-version" "1.0"
+    "properties" [
+        "tag:staff@noreply.openkim.org,2015-09-16:property/monovacancy-neutral-migration-energy-crystal-npt"
+        "tag:staff@noreply.openkim.org,2015-07-28:property/monovacancy-neutral-relaxed-formation-potential-energy-crystal-npt"
+    ]
+}

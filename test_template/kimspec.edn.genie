@@ -1,0 +1,12 @@
+{
+    "title"         "VacancyFormationMigration_{{lattice}}_{{elem}}{# FILENAME = kimspec.edn #}"
+    "test-driver"   "{{TEST_DRIVER_NAME}}"
+    "species"       "{{elem}}"
+    "extended-id"   "VacancyFormationMigration_{{lattice}}_{{elem}}__TE_{{kimnum}}_{{version}}"
+    "disclaimer"    "Computer generated"
+    "domain"        "openkim.org"
+    "executables"   ["runner"]
+    "source-citations"  "TBA"
+    "kim-api-version" "1.6"
+    "pipeline-api-version" "1.0"
+}

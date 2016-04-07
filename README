@@ -1,0 +1,34 @@
+VacancyFormationMigration Test Driver
+
+SUMMARY
+  
+  This test driver calculates the vacancy formation energy and migration energy at zero temperature and zero pressure.
+  
+  It works for all the elements, in either sc, fcc, bcc, diamond or hcp crystal structure.
+  
+METHOD
+  
+  The calculation consists of two steps:
+  
+  1. Calculate the vacancy formation energy and relaxation volume corresponding to three different sizes of supercell.
+  The minimum size is 3*3*3 cubic unit cells for diamond structure (27 * 8 = 216 atoms).
+  For other structures the minimum size is determined by the smallest number n, which makes n*n*n conventional unit cells has at least the same number of atoms as the above diamond supercell.
+  The other two sizes are the two numbers that follows the minimum size.
+  
+  The Calculation of each size starts from constructing the periodic supercell, then take out one atom from the supercell.
+  Then it does the relaxation of positions within the supercell to obtain vacancy formation energy.
+  After that, it moves the nearest atom to the vacanted site and calculates vacancy migration energy with nudged elastic band method.
+  
+  2. Extrapolate from these three results to get the value corresponding to an infinitely large supercell.
+  
+  The extrapolation is based on the elastic theory, which gives the supercell effect on vacancy formation energy and migration energy are 1/r^3.
+  Therefore, we use the two larger size to fit f(x) = a0 + a1/r^3, and obtain a0, which we use as the source value.
+  
+  It also estimates the uncertainty, based on: a. fitting with all the three sizes to the function above; b. minimization criteria used in positions relaxation and nudged elastic band calculation.
+  
+  
+  
+  
+  
+  
+  

@@ -1,0 +1,9 @@
+{"lattice": "fcc", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Al", "kimnum": "676124969573"}
+{"lattice": "diamond", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Al", "kimnum": "864738234439"}
+{"lattice": "hcp", "latticeProperty": "structure-hexagonal-crystal-npt", "elem": "Al", "kimnum": "859767516163"}
+{"lattice": "fcc", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Ni", "kimnum": "281305018285"}
+{"lattice": "diamond", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Ni", "kimnum": "795770707247"}
+{"lattice": "hcp", "latticeProperty": "structure-hexagonal-crystal-npt", "elem": "Ni", "kimnum": "586412102041"}
+{"lattice": "fcc", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Si", "kimnum": "047923587952"}
+{"lattice": "diamond", "latticeProperty": "structure-cubic-crystal-npt", "elem": "Si", "kimnum": "130498227967"}
+{"lattice": "hcp", "latticeProperty": "structure-hexagonal-crystal-npt", "elem": "Si", "kimnum": "358140171220"}

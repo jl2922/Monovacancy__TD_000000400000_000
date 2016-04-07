@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+"""
+Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
+Works for Both Cubic and HCP Crystals, at 0 K and 0 GPa
+
+This test driver first calculates VFE and VME of several fixed size supercells,
+then extrapolates these results to obtain the dilute limit. VME is calculated
+with nudged elastic band method.
+
+2016-04-06 Junhao Li <streaver91@gmail.com>
+* change the output format to conform with the new property definition.
+* add the calculation of relaxation volume and elastic multipoles.
+* change the version number to 001
+
+Author: Junhao Li <streaver91@gmail.com>
+"""
+# Python Modules
+import sys
+import re
+import json
+import math
+from collections import OrderedDict
+from scipy.optimize import fmin
+from scipy.interpolate import interp1d
+import numpy as np
+
+# ASE Modules
+try:
+    from ase.lattice import bulk
+    print 'Imported bulk from ase.lattice' # For ASE version 3.9
+except ImportError:
+    from ase.structure import bulk
+    print 'Imported bulk from ase.structure' # For ASE version <= 3.8
+from ase.optimize import FIRE, QuasiNewton, MDMin
+from ase.data import chemical_symbols
+from ase.data import reference_states
+from ase import Atoms, Atom
+from ase.io import write
+from ase.constraints import FixAtoms
+from ase.neb import NEB
+
+# KIM Modules
+from kimcalculator import *
+from kimservice import KIM_API_get_data_double
+
+
+import config as C
+
+# Generate OrderedDict for Individual keys
+def V(value, unit = '', uncert = ''):
+    res = OrderedDict([
+        ('source-value', value),
+    ])
+    if unit != '':
+        res.update(OrderedDict([
+            ('source-unit', unit),
+        ]))
+    if uncert != '':
+        res.update(OrderedDict([
+            ('source-std-uncert-value', uncert)
+        ]))
+    return res
+
+# Generate OrderedDict for all properties to report
+def packResults(res):
+    print res
+
+def main():
+    # Obtain raw inputs
+    elem = raw_input()
+    lattice = raw_input()
+    model = raw_input()
+    latticeConstA = raw_input()
+    latticeConstC = raw_input()
+
+    # If it's hcp crystal, process both a and c
+    # Otherwise, process a only
+    if lattice == 'hcp':
+        latticeConsts = [float(latticeConstA), float(latticeConstC)]
+    else:
+        latticeConsts = [float(latticeConstA)] # Ignore latticeConstC
+
+    # Create Instance
+    vacancy = Vacancy(elem, model, lattice, latticeConsts)
+
+    # Obtain Results and pack into OrderedDict
+    vacancy.run()
+    res = vacancy.getResults()
+    res = packResults(res)
+
+    # Output results
+    res = json.dumps(res, separators = (' ',' '), indent = 2)
+    with open(os.path.abspath('output/results.edn'), 'w') as f:
+        f.write(res)
+
+if __name__ == '__main__':
+    main()
