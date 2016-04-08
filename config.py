@@ -3,12 +3,13 @@
 # Author: Junhao Li <streaver91@gmail.com>
 
 # Parameters for Production
-FIRE_LOG = 'fire.log'
+DEBUG = 1
+FIRE_LOGFILE = 'fire.log'
+MDMIN_LOGFILE = 'mdmin.log'
 FIRE_MAX_STEPS = 500
 FIRE_TOL = 1e-3 # absolute
 FMIN_FTOL = 1e-10 # relative
-CELL_SIZE_MIN = 3
-CELL_SIZE_MAX = 5
+MIN_ATOMS = 100
 MDMIN_TOL = 1e-3 # absolute
 MDMIN_MAX_STEPS = 200
 NEB_POINTS = 20
@@ -17,14 +18,16 @@ EPS = 1e-10
 OUTPUT_BASIS = True
 
 # Parameters for Debugging
-# FIRE_MAX_STEPS = 200
-# FIRE_TOL = 1e-2 # absolute
+if DEBUG == 1:
+    FIRE_TOL = 1e-2 # absolute
+    MDMIN_TOL = 1e-2 # absolute
+
 
 # Extrapolation Parameters
 FITS_CNT = [2, 3] # Number of data points used for each fitting
 FITS_ORDERS = [
-    [0, 3],
-    [0, 3],
+    [0, -3],
+    [0, -3],
 ] # Number of orders included in each fitting
 # Fit Results Used (Corresponding to the above)
 FITS_VFE_VALUE = 0 # Vacancy Formation Energy

@@ -45,6 +45,7 @@ from kimservice import KIM_API_get_data_double
 
 
 import config as C
+from vacancy import Vacancy
 
 # Generate OrderedDict for Individual keys
 def V(value, unit = '', uncert = ''):
@@ -62,7 +63,7 @@ def V(value, unit = '', uncert = ''):
     return res
 
 # Generate OrderedDict for all properties to report
-def packResults(res):
+def packResult(res):
     print res
 
 def main():
@@ -81,12 +82,13 @@ def main():
         latticeConsts = [float(latticeConstA)] # Ignore latticeConstC
 
     # Create Instance
-    vacancy = Vacancy(elem, model, lattice, latticeConsts)
+    migration = [1.0, 0.0, 0.0]
+    vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
     # Obtain Results and pack into OrderedDict
     vacancy.run()
-    res = vacancy.getResults()
-    res = packResults(res)
+    res = vacancy.getResult()
+    res = packResult(res)
 
     # Output results
     res = json.dumps(res, separators = (' ',' '), indent = 2)
