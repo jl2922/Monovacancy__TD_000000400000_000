@@ -12,10 +12,11 @@ MIN_ATOMS = 100
 NEB_POINTS = 20
 UNCERT_STEPS = 20
 EPS = 1e-10
-STRESS_DX = 1e-3
+STRESS_DX = 0.10e-3
+NUM_SIZES = 3
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 1e-2 # absolute
+    FMAX_TOL = 10.0e-3 # absolute
 
 # Logs output
 FIRE_LOGFILE = 'fire.log'

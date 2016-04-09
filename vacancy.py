@@ -22,6 +22,7 @@ from ase import Atoms, Atom
 from ase.io import write
 from ase.constraints import FixAtoms
 from ase.neb import NEB
+import ase.units as units
 
 # KIM Modules
 from kimcalculator import *
@@ -203,17 +204,67 @@ class Vacancy(object):
         cellCopy = atoms.get_cell().copy()
         dx = C.STRESS_DX
         dcell = np.eye(3) * dx
+        print 'cell:', cellCopy
+        print 'volume:', atoms.get_volume()
         areas = atoms.get_volume() / np.diagonal(cellCopy)
+        print areas
         for i in range(3):
             atomsCopy.set_cell(cellCopy + dcell[i], scale_atoms = True)
             eninc = atomsCopy.get_potential_energy()
             atomsCopy.set_cell(cellCopy - dcell[i], scale_atoms = True)
             endec = atomsCopy.get_potential_energy()
-            stress[i][i] = (eninc - endec) / (2.0 * dx) / areas[i]
+            stress[i][i] = (eninc - endec) / (2.0 * dx * areas[i])
         return stress
+
+    def _getElasticStiffness(self, atoms):
+        # Obtain the top left 3*3 elastic stiffness tensor
+        atomsCopy = atoms.copy()
+        # atomsCopy.set_cell(atomsCopy.get_cell() * 1.0, scale_atoms = True)
+        cellCopy = atomsCopy.get_cell().copy()
+        atomsCopy.set_calculator(KIMCalculator(self.model))
+
+        # Obtain elastic stiffness tensor
+        EST = np.zeros((3, 3))
+        dx = C.STRESS_DX
+        dcell = np.eye(3) * dx
+        dStrain = dx / np.diagonal(cellCopy)
+        print 'atoms:', atomsCopy
+        for i in range(3):
+            atomsCopy.set_cell(cellCopy + dcell[i], scale_atoms = True)
+            stressPlus = self._getStressTensor(atomsCopy)
+            atomsCopy.set_cell(cellCopy - dcell[i], scale_atoms = True)
+            stressMinus = self._getStressTensor(atomsCopy)
+            print 'stress:', stressPlus
+            print stressMinus
+            dStress = np.diagonal(stressPlus - stressMinus) / 2.0
+            print dStress
+            print dStrain
+            EST[:, i] = dStress / dStrain
+        print 'est:', EST
+        print EST / units.GPa
+        return EST
+
+    def _getElasticCompliance(self, atoms):
+        # Obtain the top left 3*3 elastic compliance tensor
+        EST = self._getElasticStiffness(atoms)
+        print EST
+        ECT = np.linalg.inv(EST)
+        print ECT
+        return ECT
+
+    def _getDefectStrainTensor(self, EDT, ECT):
+        # Compute defect strain tensor from:
+        # EDT: elastic dipole tensor
+        # ECT: elastic compliance tensor
+        DST = np.zeros((3, 3))
+        EDTDiag = np.diagonal(EDT)
+        for i in range(3):
+            DST[i][i] = np.sum(np.diagonal(EDT) * ECT[i])
+        return DST
 
     def _getSizeResult(self, size):
         print '[Calculating Supercell of Size', size, ']'
+        F.clock('start')
 
         # Setup supercell
         supercell = self._createSupercell(size)
@@ -223,35 +274,52 @@ class Vacancy(object):
 
         # Initial and final unrelaxed state for migration
         initial, final = self._getInitialFinal(supercell)
+        F.clock('initial and final obtained')
 
         # Interpolate between initial and final
         images = self._getImages(initial, final)
+        F.clock('migration path obtained')
 
         # Object for output
         res = {}
 
         # Obtain fmax induced error (md error)
         res['fmax-uncert'] = self._getFmaxUncert(initial)
+        F.clock('fmax uncert')
+
+        # Obtain elastic compliance tensor
+        ECT = self._getElasticCompliance(supercell)
+
+        # sys.exit(0)
 
         # Obtaining vacancy formation energy
         en1 = initial.get_potential_energy()
-        res['vacancy-formation-energy'] = en1 - en0 * (nAtoms - 1) / nAtoms
+        VFE = en1 - en0 * (nAtoms - 1) / nAtoms
+        res['vacancy-formation-energy'] = VFE
 
-        # Obtain elastic dipole tensor
+        # Obtain dipole strain / stress tensor and relxation volume
         nd = 1.0 / supercell.get_volume()  # defect concentration
         stress0 = self._getStressTensor(supercell)
         stress1 = self._getStressTensor(initial)
-        res['elastic-dipole-tensor'] = (stress1 - stress0) / nd
+        EDT = (stress1 - stress0) / nd
+        DST = self._getDefectStrainTensor(EDT, ECT)
+        RV = np.trace(DST)
+        res['elastic-dipole-tensor'] = EDT
+        res['defect-strain-tensor'] = DST
+        res['relaxation-volume'] = RV
 
         # Obtain vacancy migration energy
         saddleImage = self._getSaddleImage(images)
         en2 = saddleImage.get_potential_energy()
-        res['vacancy-migration-energy'] = en2 - en1
+        VME = en2 - en1
+        res['vacancy-migration-energy'] = VME
 
         # Obtain saddle point elastic dipole tensor
         stress2 = self._getStressTensor(saddleImage)
-        res['saddle-point-elastic-dipole-tensor'] = (stress2 - stress0) / nd
+        SPEDT = (stress2 - stress0) / nd
+        res['saddle-point-elastic-dipole-tensor'] = SPEDT
 
+        F.clock('finish')
         print res
         return res
 
@@ -352,7 +420,7 @@ class Vacancy(object):
         # Determine sizes of the supercell
         nBasisAtoms = self.basis.get_number_of_atoms()
         minSize = np.ceil(np.power(C.MIN_ATOMS * 1.0 / nBasisAtoms, 0.333))
-        sizes = np.arange(minSize, minSize + 3.0, 1.0)
+        sizes = np.arange(minSize, minSize + C.NUM_SIZES, 1.0)
 
         # Obtain results for each size
         for i in range(sizes.shape[0]):
