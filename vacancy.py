@@ -4,10 +4,6 @@
 
 # Python Modules
 import sys
-import re
-import json
-import math
-from collections import OrderedDict
 from scipy.optimize import fmin
 from scipy.interpolate import interp1d
 import numpy as np
@@ -33,10 +29,15 @@ from kimservice import KIM_API_get_data_double
 
 # Load Configuration
 import config as C
+import functions as F
 
 class Vacancy(object):
     # Class for calculating vacancy formation energy and relaxation volume
     def __init__(self, elem, model, lattice, latticeConsts, migration):
+        # Inputs description:
+        # latticeConsts specified in angstrom
+        # migration vector specified in fractional coordinates
+
         # Process Inputs
         self.elem = elem
         self.model = model
@@ -48,27 +49,14 @@ class Vacancy(object):
         # Create basis for constructing supercell
         self.basis = self._createBasis()
 
-        # Initialize minimization
-        # self.FIREUncert = 0
-
-        # Determine size of the supercell
-        # nAtoms = atoms.get_number_of_atoms()
-        # factor = math.pow(8 / nAtoms, 0.333)
-        # self.cellSizeMin = int(math.ceil(factor * C.CELL_SIZE_MIN))
-        # self.cellSizeMax = self.cellSizeMin + 2
-        # print 'Cell Size Min:', self.cellSizeMin
-        # print 'Cell Size Max:', self.cellSizeMax
-        # print 'Smallest System Size:', nAtoms * self.cellSizeMin**3
-        # print 'Largest System Size:', nAtoms * self.cellSizeMax**3
-        # print 'Model Cutoff:', KIM_API_get_data_double(atoms.calc.pkim, 'cutoff')[0]
-
     def _printInputs(self):
         # Print out the inputs
-        print 'Inputs:'
+        print '[Inputs]'
         print 'Element: ', self.elem
         print 'Model: ', self.model
         print 'Lattice: ', self.lattice
         print 'Lattice Constants: ', self.latticeConsts
+        print 'Migration Vector:', self.migration
 
     def _createBasis(self):
         # Create basic atoms
@@ -76,9 +64,11 @@ class Vacancy(object):
         elem = self.elem
         lattice = self.lattice
         latticeConsts = self.latticeConsts
+
         # Check whether lattice is valid
         supportedLattices = ['sc', 'fcc', 'bcc', 'diamond', 'hcp']
         assert lattice in supportedLattices, 'lattice not supported'
+
         # Create basis according to structure
         if lattice == 'hcp':
             # Create cubic lattice to accommodate MI_OPBC
@@ -104,6 +94,7 @@ class Vacancy(object):
                 crystalstructure = lattice,
                 cubic = True,
             )
+
         if C.OUTPUT_BASIS == True:
             write('output/basis.cif', basis, format = 'cif')
         return basis
@@ -116,154 +107,153 @@ class Vacancy(object):
         return supercell
 
 
-    def _relaxAtoms(self, atoms, tol = C.FIRE_TOL, steps = C.FIRE_MAX_STEPS):
+    def _relaxAtoms(self, atoms, tol = C.FMAX_TOL, steps = C.FIRE_MAX_STEPS):
+        # Relax atoms with FIRE algorithm
         fire = FIRE(atoms, logfile = C.FIRE_LOGFILE)
         fire.run(fmax = tol, steps = steps)
         fireSteps = fire.get_number_of_steps()
-        return fireSteps < steps ? True : False
+        return fireSteps < steps
 
-    def _relaxPath(self, images):
+    def _relaxPath(self, images, tol = C.FMAX_TOL, steps = C.MDMIN_MAX_STEPS):
+        # Relax migration path with NEB
         neb = NEB(images)
         neb.interpolate()
         mdmin = MDMin(neb, logfile = C.MDMIN_LOGFILE)
-        mdmin.run(fmax = C.MDMIN_TOL, steps = C.MDMIN_MAX_STEPS)
+        mdmin.run(fmax = tol, steps = steps)
         mdminSetps = mdmin.get_number_of_steps()
-        return mdminSetps < C.MDMIN_MAX_STEPS ? True : False
+        return mdminSetps < C.MDMIN_MAX_STEPS
 
     def _findAtomId(self, positions, position):
-        return 0
+        # Find the id of positions closest to position
+        positionsCopy = positions.copy()
+        positionsCopy -= position
+        dist = np.sum(positionsCopy**2, axis = 0)
+        return np.argmin(dist)
 
-    def _getSizeResult(self, size):
-        print 'Calculating Supercell of Size', size, '...'
-
-        # Object for output
-        res = {}
-
-        # Setup supercells
-        supercell = self._createSupercell(size)
-        en0 = supercell.get_potential_energy()
-        nAtoms = supercell.get_number_of_atoms()
-        del supercell[0]
-
-        # Initial and final unrelaxed state for migration
+    def _getInitialFinal(self, supercell):
+        # Setup image before migration
         initial = supercell.copy()
-        initial.set_calculator(KIMCalculator(self.model))
-        final = supercell.copy()
+        del initial[0]
+
+        # Setup image after migration
+        final = initial.copy()
         finalPositions = final.get_positions()
-        # Assuming migration is from (0,0,0)
-        movedAtomId = self._findAtomId(finalPositions, self.migration)
+        cellSize = np.diagonal(self.basis.get_cell())
+        migration = cellSize * np.array(self.migration)
+        movedAtomId = self._findAtomId(finalPositions, migration)
         finalPositions[movedAtomId] = np.array([0.0, 0.0, 0.0])
         final.set_positions(finalPositions)
-        final.set_calculator(KIMCalculator(self.model))
 
-        # Relax initial and final state
+        # Relax both images
+        initial.set_calculator(KIMCalculator(self.model))
         tmp = self._relaxAtoms(initial)
-        assert tmp, 'Maximum FIRE Steps Reached.'
+        assert tmp, 'Maximum FIRE Steps Reached (initial).'
+        final.set_calculator(KIMCalculator(self.model))
         tmp = self._relaxAtoms(final)
-        assert tmp, 'Maximum FIRE Steps Reached.'
+        assert tmp, 'Maximum FIRE Steps Reached. (final)'
 
-        # Interpolate between initial and final
+        return initial, final
+
+    def _getImages(self, initial, final):
+        # Create Interpolated images between initial and final
         images = []
         for i in range(C.NEB_POINTS):
             image = initial.copy()
             image.set_calculator(KIMCalculator(self.model))
             images.append(image)
-        images.append(final.copy())
+        finalCopy = final.copy()
+        finalCopy.set_calculator(KIMCalculator(self.model))
+        images.append(finalCopy)
         tmp = self._relaxPath(images)
-        assert tmp, 'Maximum MDMin Steps Reached.'
+        assert tmp, 'Maximum MDMin Steps Reached. (migration path)'
+        return images
 
-        # Obtaining vacancy formation energy
-        relaxedInitial = initial.copy()
-        relaxedInitial.set_calculator(KIMCalculator(self.model))
-        en1 = relaxedInitial.get_potential_energy()
-        enCoh = en0 / nAtoms
-        res['cohesive-energy'] = enCoh
-        res['vacancy-formation-energy'] = en1 - enCoh * (nAtoms - 1)
-
-        # Obtain fmax induced error (md error)
+    def _getFmaxUncert(self, image):
+        imageCopy = image.copy()
+        imageCopy.set_calculator(KIMCalculator(self.model))
+        en1 = imageCopy.get_potential_energy()
         self._relaxAtoms(
-            relaxedInitial,
-            tol = C.FIRE_TOL * C.EPS,
+            imageCopy,
+            tol = C.FMAX_TOL * C.EPS,
             steps = C.UNCERT_STEPS
         )
-        en1Refined = relaxedInitial.get_potential_energy()
-        res['md-uncert'] = np.abs(en1Refined - en1)
+        en1Refined = imageCopy.get_potential_energy()
+        return np.abs(en1Refined - en1)
+
+    def _getSaddleImage(self, images):
+        # Obtain saddle point energy of vacancy migration
+        nImages = len(images)
+        xmid = nImages / 2
+        x = np.arange(0, nImages, 1.0)
+        y = np.array([image.get_potential_energy() for image in images])
+        pos = np.array([image.get_positions() for image in images])
+        fy = interp1d(x, y, kind = 'cubic') # fy = -y
+        fpos = interp1d(x, pos, kind = 'cubic', axis = 0)
+        xmax = F.fmax_jh(fy, x[xmid])[0]
+        saddleImage = images[0].copy()
+        saddleImage.set_positions(fpos(xmax))
+        saddleImage.set_calculator(KIMCalculator(self.model))
+        return saddleImage
+
+    def _getStressTensor(self, atoms):
+        # Obtain stress tensor for orthorhombic atoms
+        stress = np.zeros((3, 3))
+        atomsCopy = atoms.copy()
+        atomsCopy.set_calculator(KIMCalculator(self.model))
+        cellCopy = atoms.get_cell().copy()
+        dx = C.STRESS_DX
+        dcell = np.eye(3) * dx
+        areas = atoms.get_volume() / np.diagonal(cellCopy)
+        for i in range(3):
+            atomsCopy.set_cell(cellCopy + dcell[i], scale_atoms = True)
+            eninc = atomsCopy.get_potential_energy()
+            atomsCopy.set_cell(cellCopy - dcell[i], scale_atoms = True)
+            endec = atomsCopy.get_potential_energy()
+            stress[i][i] = (eninc - endec) / (2.0 * dx) / areas[i]
+        return stress
+
+    def _getSizeResult(self, size):
+        print '[Calculating Supercell of Size', size, ']'
+
+        # Setup supercell
+        supercell = self._createSupercell(size)
+        en0 = supercell.get_potential_energy()
+        nAtoms = supercell.get_number_of_atoms()
+        print 'Number of atoms:', nAtoms
+
+        # Initial and final unrelaxed state for migration
+        initial, final = self._getInitialFinal(supercell)
+
+        # Interpolate between initial and final
+        images = self._getImages(initial, final)
+
+        # Object for output
+        res = {}
+
+        # Obtain fmax induced error (md error)
+        res['fmax-uncert'] = self._getFmaxUncert(initial)
+
+        # Obtaining vacancy formation energy
+        en1 = initial.get_potential_energy()
+        res['vacancy-formation-energy'] = en1 - en0 * (nAtoms - 1) / nAtoms
 
         # Obtain elastic dipole tensor
-
+        nd = 1.0 / supercell.get_volume()  # defect concentration
+        stress0 = self._getStressTensor(supercell)
+        stress1 = self._getStressTensor(initial)
+        res['elastic-dipole-tensor'] = (stress1 - stress0) / nd
 
         # Obtain vacancy migration energy
+        saddleImage = self._getSaddleImage(images)
+        en2 = saddleImage.get_potential_energy()
+        res['vacancy-migration-energy'] = en2 - en1
 
+        # Obtain saddle point elastic dipole tensor
+        stress2 = self._getStressTensor(saddleImage)
+        res['saddle-point-elastic-dipole-tensor'] = (stress2 - stress0) / nd
 
-        # Obtain vacancy
-        sys.exit(0)
-        # removedAtomPosition = atoms.get_positions()[0]
-
-
-        # Get Initial State
-
-
-        # Unrelaxed Energy
-        # enUnrelaxed = initial.get_potential_energy()
-        # print 'Assert n initial:', initial.get_number_of_atoms()
-        # unrelaxedFormationEnergy = enUnrelaxed - enAtoms * (nAtoms - 1) / nAtoms
-
-        # Output Before Calculation
-
-        # print 'Unrelaxed Energy w/ Vacancy:', enUnrelaxed
-        # print 'Unrelaxed Formation Energy:', unrelaxedFormationEnergy
-
-        # Test Moving Epsilon
-        # for stepLenFactor in range(10):
-        #     stepLen = 0.01 * 2**stepLenFactor # A
-        #     tmpPositions = initial.get_positions()
-        #     tmpPositions[0][0] = tmpPositions[0][0] + stepLen
-        #     initial.set_positions(tmpPositions)
-        #     enMoved = initial.get_potential_energy()
-        #     print 'Moving Energy (', str(stepLen), 'A)', enMoved - enUnrelaxed
-        #     tmpPositions[0][0] = tmpPositions[0][0] - stepLen
-        #     initial.set_positions(tmpPositions)
-        # print tmpPositions
-
-        # Relaxation
-        # dyn = FIRE(initial, logfile = C.FIRE_LOG)
-        # dyn.run(fmax = C.FIRE_TOL, steps = C.FIRE_MAX_STEPS)
-        # dynSteps = dyn.get_number_of_steps()
-        # assert dynSteps < C.FIRE_MAX_STEPS, 'FIRE Steps Maximum Reached.'
-        # en1 = initial.get_potential_energy()
-
-        # Perform more steps and obtain FIRE Uncertainty
-        # self.en1Uncert =
-
-        # Get Final State
-        tmpPositions = atoms.get_positions()
-        tmpPositions[0] = removedAtomPosition
-        atoms.set_positions(tmpPositions)
-        final = atoms.copy()
-        final.set_calculator(KIMCalculator(self.model))
-        dyn = FIRE(final, logfile = C.FIRE_LOG)
-        dyn.run(fmax = C.FIRE_TOL, steps = C.FIRE_MAX_STEPS)
-        if dyn.get_number_of_steps() >= C.FIRE_MAX_STEPS:
-            print '[ERR1047]FIRE Failed: Steps Exceeds Maximum.'
-            print 'Vacancy Formation Energy May Not Be Accurate.'
-
-        # Calculate VFE
-        enInitial = initial.get_potential_energy()
-        formationEnergy = enInitial - enAtoms * (nAtoms - 1) / nAtoms
-
-        # Spline Interpolation
-        x = np.arange(0, C.NEB_POINTS + 2)
-        y = np.array([image.get_potential_energy() for image in images])
-        f = interp1d(x, -y, kind = 'cubic') # f(x) = -y(x) in order to use fmin
-        xmax = fmin(f, x[C.NEB_POINTS / 2 + 1], ftol = C.FMIN_FTOL)
-        ymax = -f(xmax)
-        enSaddle = ymax[0]
-        migrationEnergy = enSaddle - enInitial
-        
-        # Output Results
-        print 'Formation Energy:', formationEnergy
-        print 'Migration Energy:', migrationEnergy
-        return migrationEnergy, formationEnergy
+        print res
+        return res
 
     def _getAngle(self, vec1, vec2):
         # Get angle between two vectors in degrees (always between 0 - 180)
@@ -362,7 +352,7 @@ class Vacancy(object):
         # Determine sizes of the supercell
         nBasisAtoms = self.basis.get_number_of_atoms()
         minSize = np.ceil(np.power(C.MIN_ATOMS * 1.0 / nBasisAtoms, 0.333))
-        sizes = np.arange(minSize, minSize + 2.0, 1.0)
+        sizes = np.arange(minSize, minSize + 3.0, 1.0)
 
         # Obtain results for each size
         for i in range(sizes.shape[0]):
@@ -401,7 +391,7 @@ class Vacancy(object):
         # ]
 
         print '\n[Calculation Results Summary]'
-        print 'Size\tMigrationEnergy\tFormationEnergy'
+        print 'Size    MigrationEnergy    FormationEnergy'
         for i in range(len(sizes)):
             print [sizes[i], migrationEnergyBySize[i], formationEnergyBySize[i]]
 

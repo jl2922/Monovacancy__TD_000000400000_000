@@ -2,26 +2,25 @@
 # Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
 
-# Parameters for Production
 DEBUG = 1
-FIRE_LOGFILE = 'fire.log'
-MDMIN_LOGFILE = 'mdmin.log'
-FIRE_MAX_STEPS = 500
-FIRE_TOL = 1e-3 # absolute
-FMIN_FTOL = 1e-10 # relative
-MIN_ATOMS = 100
-MDMIN_TOL = 1e-3 # absolute
+
+# Accuracy related parameters
+FMAX_TOL = 1e-3 # absolute
+FIRE_MAX_STEPS = 200
 MDMIN_MAX_STEPS = 200
+MIN_ATOMS = 100
 NEB_POINTS = 20
 UNCERT_STEPS = 20
 EPS = 1e-10
-OUTPUT_BASIS = True
-
+STRESS_DX = 1e-3
 # Parameters for Debugging
 if DEBUG == 1:
-    FIRE_TOL = 1e-2 # absolute
-    MDMIN_TOL = 1e-2 # absolute
+    FMAX_TOL = 1e-2 # absolute
 
+# Logs output
+FIRE_LOGFILE = 'fire.log'
+MDMIN_LOGFILE = 'mdmin.log'
+OUTPUT_BASIS = True
 
 # Extrapolation Parameters
 FITS_CNT = [2, 3] # Number of data points used for each fitting
@@ -34,6 +33,11 @@ FITS_VFE_VALUE = 0 # Vacancy Formation Energy
 FITS_VFE_UNCERT = [1]
 FITS_VME_VALUE = 0 # Vacancy Migration Energy
 FITS_VME_UNCERT = [1]
+
+# Conversion constants
+e = 1.602176565e-19
+A = 1.0e-10
+eVoverA32GPa = e / A**3 / 1.0e9 # Convert eV to GPa
 
 # Output Configuration
 UNIT_ENERGY = 'eV'
