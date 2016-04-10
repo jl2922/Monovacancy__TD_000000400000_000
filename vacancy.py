@@ -7,6 +7,7 @@ import sys
 from scipy.optimize import fmin
 from scipy.interpolate import interp1d
 import numpy as np
+import json
 
 # ASE Modules
 try:
@@ -203,17 +204,24 @@ class Vacancy(object):
         atomsCopy.set_calculator(KIMCalculator(self.model))
         cellCopy = atoms.get_cell().copy()
         dx = C.STRESS_DX
-        dcell = np.eye(3) * dx
-        print 'cell:', cellCopy
-        print 'volume:', atoms.get_volume()
+        # print 'cell:', cellCopy
+        # print 'volume:', atoms.get_volume()
         areas = atoms.get_volume() / np.diagonal(cellCopy)
-        print areas
+        print atoms
+        # print areas
         for i in range(3):
-            atomsCopy.set_cell(cellCopy + dcell[i], scale_atoms = True)
-            eninc = atomsCopy.get_potential_energy()
-            atomsCopy.set_cell(cellCopy - dcell[i], scale_atoms = True)
-            endec = atomsCopy.get_potential_energy()
-            stress[i][i] = (eninc - endec) / (2.0 * dx * areas[i])
+            dcell = np.zeros((3, 3))
+            dcell[i][i] = dx
+            atomsCopy.set_cell(cellCopy - 2 * dcell, scale_atoms = True)
+            enM2 = atomsCopy.get_potential_energy()
+            atomsCopy.set_cell(cellCopy - dcell, scale_atoms = True)
+            enM1 = atomsCopy.get_potential_energy()
+            atomsCopy.set_cell(cellCopy + 2 * dcell, scale_atoms = True)
+            enP2 = atomsCopy.get_potential_energy()
+            atomsCopy.set_cell(cellCopy + dcell, scale_atoms = True)
+            enP1 = atomsCopy.get_potential_energy()
+            derivative = (-enP2 + 8 * enP1 - 8 * enM1 + enM2) / (12 * dx)
+            stress[i][i] = derivative / areas[i]
         return stress
 
     def _getElasticStiffness(self, atoms):
@@ -226,13 +234,14 @@ class Vacancy(object):
         # Obtain elastic stiffness tensor
         EST = np.zeros((3, 3))
         dx = C.STRESS_DX
-        dcell = np.eye(3) * dx
         dStrain = dx / np.diagonal(cellCopy)
         print 'atoms:', atomsCopy
         for i in range(3):
-            atomsCopy.set_cell(cellCopy + dcell[i], scale_atoms = True)
+            dcell = np.zeros((3, 3))
+            dcell[i][i] = dx
+            atomsCopy.set_cell(cellCopy + dcell, scale_atoms = True)
             stressPlus = self._getStressTensor(atomsCopy)
-            atomsCopy.set_cell(cellCopy - dcell[i], scale_atoms = True)
+            atomsCopy.set_cell(cellCopy - dcell, scale_atoms = True)
             stressMinus = self._getStressTensor(atomsCopy)
             print 'stress:', stressPlus
             print stressMinus
@@ -241,15 +250,15 @@ class Vacancy(object):
             print dStrain
             EST[:, i] = dStress / dStrain
         print 'est:', EST
-        print EST / units.GPa
+        # print EST / units.GPa
         return EST
 
     def _getElasticCompliance(self, atoms):
         # Obtain the top left 3*3 elastic compliance tensor
         EST = self._getElasticStiffness(atoms)
-        print EST
+        # print EST
         ECT = np.linalg.inv(EST)
-        print ECT
+        # print ECT
         return ECT
 
     def _getDefectStrainTensor(self, EDT, ECT):
@@ -287,9 +296,6 @@ class Vacancy(object):
         res['fmax-uncert'] = self._getFmaxUncert(initial)
         F.clock('fmax uncert')
 
-        # Obtain elastic compliance tensor
-        ECT = self._getElasticCompliance(supercell)
-
         # sys.exit(0)
 
         # Obtaining vacancy formation energy
@@ -302,11 +308,11 @@ class Vacancy(object):
         stress0 = self._getStressTensor(supercell)
         stress1 = self._getStressTensor(initial)
         EDT = (stress1 - stress0) / nd
-        DST = self._getDefectStrainTensor(EDT, ECT)
+        DST = self._getDefectStrainTensor(EDT, self.ECT)
         RV = np.trace(DST)
         res['elastic-dipole-tensor'] = EDT
         res['defect-strain-tensor'] = DST
-        res['relaxation-volume'] = RV
+        res['vacancy-relaxation-volume'] = RV
 
         # Obtain vacancy migration energy
         saddleImage = self._getSaddleImage(images)
@@ -323,18 +329,18 @@ class Vacancy(object):
         print res
         return res
 
-    def _getAngle(self, vec1, vec2):
-        # Get angle between two vectors in degrees (always between 0 - 180)
-        vec1Unit = vec1 / np.linalg.norm(vec1)
-        vec2Unit = vec2 / np.linalg.norm(vec2)
-        angle = np.arccos(np.dot(vec1Unit, vec2Unit))
-        if np.isnan(angle):
-            return 0.0
-        angle = angle * 180.0 / np.pi
-        return angle
-
     def _getFit(self, xdata, ydata, orders):
         # Polynomial Fitting with Specific Orders
+        # Deal with higher order ydate
+        if len(ydata.shape) > 2:
+            ydataShape = ydata.shape
+            ydataNew = ydata.reshape((ydataShape[0], -1))
+            res = self._getFit(xdata, ydataNew, orders)
+            print ydataShape[1:]
+            res = res.reshape((len(orders), ) + ydataShape[1:])
+            return res
+
+        # Return fitted results Corresponding to the orders as np array
         A = []
         print '[Fitting]'
         print 'xdata:', xdata
@@ -344,77 +350,99 @@ class Vacancy(object):
             A.append(np.power(xdata * 1.0, order))
         A = np.vstack(A).T
         res = np.linalg.lstsq(A, ydata)
+        res = res[0]
         print 'Results:', res
-        return res[0]
+        return res
 
-    def _extrapolate(self, sizes, valueBySize, valueFitId, uncertFitsId, systemUncert):
-        # Extrapolate to Obtain VFE and VME of Infinite Size
-        naSizes = np.array(sizes)
-        naValueBySize = np.array(valueBySize)
-        valueFitsBySize = []
-        for i in range(len(C.FITS_CNT)):
-            cnt = C.FITS_CNT[i]
-            orders = C.FITS_ORDERS[i]
-            print 'Fitting w/', cnt, 'points, including orders', orders
-            valueFits = []
-            for j in range(0, len(sizes) - cnt + 1):
-                xdata = naSizes[j:(j + cnt)]
-                valueFits.append(self._getFit(
-                    xdata,
-                    valueBySize[j:(j + cnt)],
-                    orders
-                )[0])
-            valueFitsBySize.append(valueFits)
+    def _extrapolate(self, sizes, sizeResults):
+        properties = sizeResults[0].keys()
+        propValues = {}
+        nSizes = sizes.shape[0]
+        for prop in properties:
+            tmp = np.array([sizeResults[i][prop] for i in range(nSizes)])
+            propValues[prop] = tmp
 
-        # Get Source Value
-        valueFitCnt = C.FITS_CNT[valueFitId]
-        maxSizeId = len(sizes) - 1
-        sourceValue = valueFitsBySize[valueFitId][maxSizeId - valueFitCnt + 1]
+        print propValues
 
-        # Get Source Uncertainty (Statistical)
-        sourceUncert = 0
-        for uncertFitId in uncertFitsId:
-            uncertFitCnt = C.FITS_CNT[uncertFitId]
-            uncertValue = valueFitsBySize[uncertFitId][maxSizeId - uncertFitCnt + 1]
-            sourceUncert = max([abs(uncertValue - sourceValue), sourceUncert])
+        def _checkProp(prop):
+            assert prop in properties, prop + ' not found'
 
-        # Include systematic error, assuming it is independent of statistical errors
-        sourceUncert = math.sqrt(sourceUncert**2 + systemUncert**2)
-        return sourceValue, sourceUncert
+        def _extProp(prop, orders, nPoints):
+            # Always use the last few points
+            assert nPoints <= nSizes, 'not enough points for extrapolation'
+            sizesNew = sizes[-nPoints:]
+            valuesNew = propValues[prop][-nPoints:]
+            fitRes = self._getFit(sizesNew, valuesNew, orders)
+            return fitRes[0]
 
-    def _getCrystalInfo(self):
-        unitBulk = self.atoms
-        unitCell = unitBulk.get_cell()
-        hostInfo = OrderedDict([
-            ('host-cauchy-stress', V([0, 0, 0, 0, 0, 0], C.UNIT_PRESSURE)),
-            ('host-short-name', V([self.lattice])),
-            ('host-a', V(np.linalg.norm(unitCell[0]), C.UNIT_LENGTH)),
-            ('host-b', V(np.linalg.norm(unitCell[1]), C.UNIT_LENGTH)),
-            ('host-c', V(np.linalg.norm(unitCell[2]), C.UNIT_LENGTH)),
-            ('host-alpha', V(self._getAngle(unitCell[1], unitCell[2]), C.UNIT_ANGLE)),
-            ('host-beta', V(self._getAngle(unitCell[2], unitCell[0]), C.UNIT_ANGLE)),
-            ('host-gamma', V(self._getAngle(unitCell[0], unitCell[1]), C.UNIT_ANGLE)),
-            ('host-space-group', V(C.SPACE_GROUPS[self.lattice])),
-            ('host-wyckoff-multiplicity-and-letter', V(C.WYCKOFF_CODES[self.lattice])),
-            ('host-wyckoff-coordinates', V(C.WYCKOFF_SITES[self.lattice])),
-            ('host-wyckoff-species', V([self.elem] * len(C.WYCKOFF_CODES[self.lattice]))),
-        ])
-        reservoirInfo = OrderedDict([
-            ('reservoir-cohesive-potential-energy', V(unitBulk.get_potential_energy(), C.UNIT_ENERGY)),
-            ('reservoir-short-name', V([self.lattice])),
-            ('reservoir-cauchy-stress', V([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], C.UNIT_PRESSURE)),
-            ('reservoir-a', V(np.linalg.norm(unitCell[0]), C.UNIT_LENGTH)),
-            ('reservoir-b', V(np.linalg.norm(unitCell[1]), C.UNIT_LENGTH)),
-            ('reservoir-c', V(np.linalg.norm(unitCell[2]), C.UNIT_LENGTH)),
-            ('reservoir-alpha', V(self._getAngle(unitCell[1], unitCell[2]), C.UNIT_ANGLE)),
-            ('reservoir-beta', V(self._getAngle(unitCell[2], unitCell[0]), C.UNIT_ANGLE)),
-            ('reservoir-gamma', V(self._getAngle(unitCell[0], unitCell[1]), C.UNIT_ANGLE)),
-            ('reservoir-space-group', V(C.SPACE_GROUPS[self.lattice])),
-            ('reservoir-wyckoff-multiplicity-and-letter', V(C.WYCKOFF_CODES[self.lattice])),
-            ('reservoir-wyckoff-coordinates', V(C.WYCKOFF_SITES[self.lattice])),
-            ('reservoir-wyckoff-species', V([self.elem] * len(C.WYCKOFF_CODES[self.lattice]))),
-        ])
-        return hostInfo, reservoirInfo
+        def _format(value, unit = '', uncert = ''):
+            if type(value) == np.ndarray:
+                value = value.tolist()
+            res = {
+                'source-value': value
+            }
+            if unit != '':
+                res['source-unit'] = unit
+            if uncert != '':
+                if type(uncert) == np.ndarray:
+                    uncert = uncert.tolist()
+                res['source-std-uncert-value'] = uncert
+            return res
+
+        def _getValueUncert(prop, orders, nPts, nPtsUncert, sysUncert):
+            print 'extrapolating', prop
+            _checkProp(prop)
+            val = _extProp(prop, [0, -3], nPts)
+            val2 = _extProp(prop, [0, -3], nPtsUncert)
+            uncert = np.sqrt(np.abs(val - val2)**2 + sysUncert**2)
+            return val, uncert
+
+        _checkProp('fmax-uncert')
+        fmaxUncert = np.max(propValues['fmax-uncert'])
+
+        res = {} # Object for return
+
+        # Extrapolate vacancy formation energy
+        VFE, VFEUncert = _getValueUncert(
+            'vacancy-formation-energy',
+            [0, -3], 3, 2, fmaxUncert
+        )
+        res['vacancy-formation-energy'] = _format(VFE, 'eV', VFEUncert)
+
+        # Extrapolate vacancy migration energy
+        VME, VMEUncert = _getValueUncert(
+            'vacancy-migration-energy',
+            [0, -3], 3, 2, fmaxUncert
+        )
+        res['vacancy-migration-energy'] = _format(VME, 'eV', VMEUncert)
+
+        # Extrapolate elastic dipole tensors
+        EDT, EDTUncert = _getValueUncert(
+            'elastic-dipole-tensor',
+            [0, -3], 3, 2, fmaxUncert
+        )
+        res['elastic-dipole-tensor'] = _format(EDT, 'eV', EDTUncert)
+        SPEDT, SPEDTUncert = _getValueUncert(
+            'saddle-point-elastic-dipole-tensor',
+            [0, -3], 3, 2, fmaxUncert
+        )
+        res['saddle-point-elastic-dipole-tensor'] = _format(SPEDT, 'eV', SPEDTUncert)
+
+        # Extrapolate defect strain tensor
+        DST, DSTUncert = _getValueUncert(
+            'defect-strain-tensor',
+            [0, -3], 3, 2, 0.0
+        )
+        DSTUncert = np.sqrt(DSTUncert**2 + (fmaxUncert / VFE * DST)**2)
+        res['defect-strain-tensor'] = _format(DST, 'angstrom^3', DSTUncert)
+
+        # Extrapolate vacancy relxation volume
+        RV = np.array(DST).trace()
+        RVUncert = np.sqrt(np.sum(np.diagonal(np.array(DSTUncert))**2))
+        res['vacancy-relxation-volume'] = _format(RV, 'angstrom^3', RVUncert)
+
+        resStr = json.dumps(res, separators = (' ',' '), indent = 2)
+        print resStr
 
     def run(self):
         # Determine sizes of the supercell
@@ -422,85 +450,19 @@ class Vacancy(object):
         minSize = np.ceil(np.power(C.MIN_ATOMS * 1.0 / nBasisAtoms, 0.333))
         sizes = np.arange(minSize, minSize + C.NUM_SIZES, 1.0)
 
+        # Obtain common variables
+        supercell = self._createSupercell(minSize.astype(int))
+        self.ECT = self._getElasticCompliance(self.basis)
+        print self.ECT
+        
         # Obtain results for each size
+        sizeResults = []
         for i in range(sizes.shape[0]):
             size = sizes[i].astype(int)
-            sizeResult = self._getSizeResult(size)
+            sizeResults.append(self._getSizeResult(size))
 
-        sys.exit(0)
-
+        self.res = self._extrapolate(sizes, sizeResults)
 
 
     def getResult(self):
-        # Calculate VME and VFE for Each Size
-        sizes = []
-        migrationEnergyBySize = []
-        formationEnergyBySize = []
-        print '\n[Calculation]'
-        for size in range(self.cellSizeMin, self.cellSizeMax + 1):
-            migrationEnergy, formationEnergy = self._getResultsForSize(size)
-            sizes.append(size)
-            migrationEnergyBySize.append(migrationEnergy)
-            formationEnergyBySize.append(formationEnergy)
-
-
-
-        # For Debugging Output
-        # sizes = [4, 5, 6]
-        # migrationEnergyBySize = [
-            # 0.64576855097573116,
-            # 0.64448594514897195,
-            # 0.64412217147128104,
-        # ]
-        # formationEnergyBySize = [
-            # 0.67914728564926463,
-            # 0.67877480646416188,
-            # 0.67873178748595819,
-        # ]
-
-        print '\n[Calculation Results Summary]'
-        print 'Size    MigrationEnergy    FormationEnergy'
-        for i in range(len(sizes)):
-            print [sizes[i], migrationEnergyBySize[i], formationEnergyBySize[i]]
-
-        # Extrapolate for VFE and VME of Infinite Size
-        print '\n[Extrapolation]'
-        VMEValue, VMEUncert = self._extrapolate(
-            sizes,
-            migrationEnergyBySize,
-            C.FITS_VME_VALUE,
-            C.FITS_VME_UNCERT,
-            self.FIREUncert * 1.414, # Assuming MDMin Uncertainty Same as FIRE
-        )
-        VFEValue, VFEUncert = self._extrapolate(
-            sizes,
-            formationEnergyBySize,
-            C.FITS_VFE_VALUE,
-            C.FITS_VFE_UNCERT,
-            self.FIREUncert,
-        )
-
-        # Print Main Results
-        print 'Vacancy Migration Energy:', [VMEValue, VMEUncert]
-        print 'Vacancy Formation Energy:', [VFEValue, VFEUncert]
-        print 'FIRE Uncertainty:', self.FIREUncert
-
-        # Prepare Output
-        migrationEnergyResult = OrderedDict([
-            ('property-id', C.VME_PROP_ID),
-            ('instance-id', 1),
-            ('vacancy-migration-energy', V(VMEValue, C.UNIT_ENERGY, VMEUncert)),
-            ('host-missing-atom-start', V(1)),
-            ('host-missing-atom-end', V(1)),
-        ])
-        formationEnergyResult = OrderedDict([
-            ('property-id', C.VFE_PROP_ID),
-            ('instance-id', 2),
-            ('relaxed-formation-potential-energy', V(VFEValue, C.UNIT_ENERGY, VFEUncert)),
-            ('host-removed-atom', V(1)),
-        ])
-        hostInfo, reservoirInfo = self._getCrystalInfo()
-        migrationEnergyResult.update(hostInfo)
-        formationEnergyResult.update(hostInfo)
-        formationEnergyResult.update(reservoirInfo)
-        return [migrationEnergyResult, formationEnergyResult]
+        return self.res

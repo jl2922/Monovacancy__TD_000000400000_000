@@ -8,15 +8,16 @@ DEBUG = 1
 FMAX_TOL = 1e-3 # absolute
 FIRE_MAX_STEPS = 200
 MDMIN_MAX_STEPS = 200
-MIN_ATOMS = 100
+MIN_ATOMS = 50
 NEB_POINTS = 20
 UNCERT_STEPS = 20
 EPS = 1e-10
-STRESS_DX = 0.10e-3
+STRESS_DX = 1.0e-3
 NUM_SIZES = 3
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 10.0e-3 # absolute
+    FMAX_TOL = 50.0e-3 # absolute
+    NEB_POINTS = 9
 
 # Logs output
 FIRE_LOGFILE = 'fire.log'

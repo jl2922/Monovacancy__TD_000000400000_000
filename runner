@@ -43,24 +43,8 @@ from ase.neb import NEB
 from kimcalculator import *
 from kimservice import KIM_API_get_data_double
 
-
 import config as C
 from vacancy import Vacancy
-
-# Generate OrderedDict for Individual keys
-def V(value, unit = '', uncert = ''):
-    res = OrderedDict([
-        ('source-value', value),
-    ])
-    if unit != '':
-        res.update(OrderedDict([
-            ('source-unit', unit),
-        ]))
-    if uncert != '':
-        res.update(OrderedDict([
-            ('source-std-uncert-value', uncert)
-        ]))
-    return res
 
 # Generate OrderedDict for all properties to report
 def packResult(res):
@@ -87,6 +71,9 @@ def main():
 
     # Obtain Results and pack into OrderedDict
     vacancy.run()
+
+    sys.exit(0)
+
     res = vacancy.getResult()
     res = packResult(res)
 
@@ -94,6 +81,9 @@ def main():
     res = json.dumps(res, separators = (' ',' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(res)
+    resJson = json.dumps(res, indent = 2)
+    with open(os.path.abspath('output/results.json'), 'w') as f:
+        f.write(resJson)
 
 if __name__ == '__main__':
     main()
