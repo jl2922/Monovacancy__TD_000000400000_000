@@ -8,6 +8,7 @@ from scipy.optimize import fmin
 from scipy.interpolate import interp1d
 import numpy as np
 import json
+import tarfile
 
 # ASE Modules
 try:
@@ -33,6 +34,20 @@ from kimservice import KIM_API_get_data_double
 import config as C
 import functions as F
 
+def _format(value, unit = '', uncert = ''):
+    if type(value) == np.ndarray:
+        value = value.tolist()
+    res = {
+        'source-value': value
+    }
+    if unit != '':
+        res['source-unit'] = unit
+    if uncert != '':
+        if type(uncert) == np.ndarray:
+            uncert = uncert.tolist()
+        res['source-std-uncert-value'] = uncert
+    return res
+
 class Vacancy(object):
     # Class for calculating vacancy formation energy and relaxation volume
     def __init__(self, elem, model, lattice, latticeConsts, migration):
@@ -50,6 +65,9 @@ class Vacancy(object):
 
         # Create basis for constructing supercell
         self.basis = self._createBasis()
+
+        # For storing cif file paths to be compressed
+        self._cifs = []
 
     def _printInputs(self):
         # Print out the inputs
@@ -71,6 +89,7 @@ class Vacancy(object):
         supportedLattices = ['sc', 'fcc', 'bcc', 'diamond', 'hcp']
         assert lattice in supportedLattices, 'lattice not supported'
 
+        res = {}
         # Create basis according to structure
         if lattice == 'hcp':
             # Create cubic lattice to accommodate MI_OPBC
@@ -89,15 +108,43 @@ class Vacancy(object):
                 pbc = [1, 1, 1]
             )
             basis.set_cell(np.array([a, a * rt3, c]), scale_atoms = True)
+            res['a'] = _format(a, 'angstrom')
+            res['b'] = _format(a, 'angstrom')
+            res['c'] = _format(c, 'angstrom')
+            res['alpha'] = _format(90.0, 'degree')
+            res['beta'] = _format(90.0, 'degree')
+            res['gamma'] = _format(120.0, 'degree')
+            basisCoords = [[0.0, 0.0, 0.0], [2.0 / 3, 1.0 / 3, 0.5]]
+            res['basis-atom-coordinates'] = _format(basisCoords)
+            res['basis-atom-species'] = _format([elem] * 2)
         else:
+            a = latticeConsts[0]
             basis = bulk(
                 elem,
-                a = latticeConsts[0],
+                a = a,
                 crystalstructure = lattice,
                 cubic = True,
             )
+            res['a'] = _format(a, 'angstrom')
+            res['b'] = _format(a, 'angstrom')
+            res['c'] = _format(a, 'angstrom')
+            res['alpha'] = _format(90.0, 'degree')
+            res['beta'] = _format(90.0, 'degree')
+            res['gamma'] = _format(90.0, 'degree')
+            basisCoords = basis.get_positions() / a
+            basisNAtoms = basis.get_number_of_atoms()
+            res['basis-atom-coordinates'] = _format(basisCoords)
+            res['basis-atom-species'] = _format([elem] * basisNAtoms)
 
-        if C.OUTPUT_BASIS == True:
+        res['basis-short-name'] = _format([lattice])
+        res['space-group'] = _format(C.SPACE_GROUPS[lattice])
+        res['wyckoff-multiplicity-and-letter'] = _format(C.WYCKOFF_CODES[lattice])
+        res['wyckoff-coordinates'] = _format(C.WYCKOFF_SITES[lattice])
+        res['wyckoff-species'] = _format([elem])
+
+        self._res = res
+
+        if C.SAVE_BASIS == True:
             write('output/basis.cif', basis, format = 'cif')
         return basis
 
@@ -117,7 +164,7 @@ class Vacancy(object):
         return fireSteps < steps
 
     def _relaxPath(self, images, tol = C.FMAX_TOL, steps = C.MDMIN_MAX_STEPS):
-        # Relax migration path with NEB
+        # Relax migration path with nudged elastic band
         neb = NEB(images)
         neb.interpolate()
         mdmin = MDMin(neb, logfile = C.MDMIN_LOGFILE)
@@ -133,9 +180,11 @@ class Vacancy(object):
         return np.argmin(dist)
 
     def _getInitialFinal(self, supercell):
+        nAtoms = supercell.get_number_of_atoms()
         # Setup image before migration
         initial = supercell.copy()
         del initial[0]
+        self._saveAtoms('unrelaxedInitial%d' % nAtoms, initial)
 
         # Setup image after migration
         final = initial.copy()
@@ -145,14 +194,17 @@ class Vacancy(object):
         movedAtomId = self._findAtomId(finalPositions, migration)
         finalPositions[movedAtomId] = np.array([0.0, 0.0, 0.0])
         final.set_positions(finalPositions)
+        self._saveAtoms('unrelaxedFinal%d' % nAtoms, initial)
 
         # Relax both images
         initial.set_calculator(KIMCalculator(self.model))
         tmp = self._relaxAtoms(initial)
         assert tmp, 'Maximum FIRE Steps Reached (initial).'
+        self._saveAtoms('relaxedInitial%d' % nAtoms, initial)
         final.set_calculator(KIMCalculator(self.model))
         tmp = self._relaxAtoms(final)
         assert tmp, 'Maximum FIRE Steps Reached. (final)'
+        self._saveAtoms('relaxedFinal%d' % nAtoms, initial)
 
         return initial, final
 
@@ -171,19 +223,33 @@ class Vacancy(object):
         return images
 
     def _getFmaxUncert(self, image):
+        # Obtain fmax induced uncertainty
+        # Relax images for a few more steps
         imageCopy = image.copy()
         imageCopy.set_calculator(KIMCalculator(self.model))
-        en1 = imageCopy.get_potential_energy()
+        enOrigin = imageCopy.get_potential_energy()
+        stressOrigin = self._getStressTensor(imageCopy)
         self._relaxAtoms(
             imageCopy,
             tol = C.FMAX_TOL * C.EPS,
             steps = C.UNCERT_STEPS
         )
+
+        # Obtain energy uncertainty
         en1Refined = imageCopy.get_potential_energy()
-        return np.abs(en1Refined - en1)
+        enUncert = np.abs(en1Refined - enOrigin)
+
+        # Obtain stress uncertainty
+        stressRefined = self._getStressTensor(imageCopy)
+        stressUncert = np.abs(stressRefined - stressOrigin)
+        edtUncert = stressUncert * imageCopy.get_volume()
+
+        return enUncert, edtUncert
+
 
     def _getSaddleImage(self, images):
         # Obtain saddle point energy of vacancy migration
+        nAtoms = images[0].get_number_of_atoms() + 1
         nImages = len(images)
         xmid = nImages / 2
         x = np.arange(0, nImages, 1.0)
@@ -195,70 +261,60 @@ class Vacancy(object):
         saddleImage = images[0].copy()
         saddleImage.set_positions(fpos(xmax))
         saddleImage.set_calculator(KIMCalculator(self.model))
+        self._saveAtoms('relaxedSaddle%d' % nAtoms, saddleImage)
         return saddleImage
 
     def _getStressTensor(self, atoms):
         # Obtain stress tensor for orthorhombic atoms
-        stress = np.zeros((3, 3))
-        atomsCopy = atoms.copy()
-        atomsCopy.set_calculator(KIMCalculator(self.model))
         cellCopy = atoms.get_cell().copy()
-        dx = C.STRESS_DX
-        # print 'cell:', cellCopy
-        # print 'volume:', atoms.get_volume()
         areas = atoms.get_volume() / np.diagonal(cellCopy)
-        print atoms
-        # print areas
+        stress = np.zeros((3, 3))
+
+        def energyToCell(cell):
+            # Potential energy partial cell size
+            # Warning: will cause atoms to change
+            atoms.set_cell(cell, scale_atoms = True)
+            return atoms.get_potential_energy()
+
+        # Loop through each direction
         for i in range(3):
-            dcell = np.zeros((3, 3))
-            dcell[i][i] = dx
-            atomsCopy.set_cell(cellCopy - 2 * dcell, scale_atoms = True)
-            enM2 = atomsCopy.get_potential_energy()
-            atomsCopy.set_cell(cellCopy - dcell, scale_atoms = True)
-            enM1 = atomsCopy.get_potential_energy()
-            atomsCopy.set_cell(cellCopy + 2 * dcell, scale_atoms = True)
-            enP2 = atomsCopy.get_potential_energy()
-            atomsCopy.set_cell(cellCopy + dcell, scale_atoms = True)
-            enP1 = atomsCopy.get_potential_energy()
-            derivative = (-enP2 + 8 * enP1 - 8 * enM1 + enM2) / (12 * dx)
-            stress[i][i] = derivative / areas[i]
+            dEnergy = F.partialD(energyToCell, cellCopy, (i, i))
+            stress[i][i] = dEnergy / areas[i]
+
+        # Restore to original cell
+        atoms.set_cell(cellCopy, scale_atoms = True)
+
         return stress
 
     def _getElasticStiffness(self, atoms):
         # Obtain the top left 3*3 elastic stiffness tensor
-        atomsCopy = atoms.copy()
-        # atomsCopy.set_cell(atomsCopy.get_cell() * 1.0, scale_atoms = True)
-        cellCopy = atomsCopy.get_cell().copy()
-        atomsCopy.set_calculator(KIMCalculator(self.model))
+        cellCopy = atoms.get_cell().copy()
+        cellDiag = np.diagonal(cellCopy)
 
         # Obtain elastic stiffness tensor
         EST = np.zeros((3, 3))
-        dx = C.STRESS_DX
-        dStrain = dx / np.diagonal(cellCopy)
-        print 'atoms:', atomsCopy
+
+        def stressToCell(cell):
+            # Partial stress partial cell size
+            # Warning: will cause atoms to change
+            atoms.set_cell(cell, scale_atoms = True)
+            return self._getStressTensor(atoms)
+
+        # Loop through strain in each direction
         for i in range(3):
-            dcell = np.zeros((3, 3))
-            dcell[i][i] = dx
-            atomsCopy.set_cell(cellCopy + dcell, scale_atoms = True)
-            stressPlus = self._getStressTensor(atomsCopy)
-            atomsCopy.set_cell(cellCopy - dcell, scale_atoms = True)
-            stressMinus = self._getStressTensor(atomsCopy)
-            print 'stress:', stressPlus
-            print stressMinus
-            dStress = np.diagonal(stressPlus - stressMinus) / 2.0
-            print dStress
-            print dStrain
-            EST[:, i] = dStress / dStrain
-        print 'est:', EST
-        # print EST / units.GPa
+            dStress = F.partialD(stressToCell, cellCopy, (i, i))
+            dStress = np.diagonal(dStress)
+            EST[:, i] = dStress * cellDiag
+
+        # Restore to original cell
+        atoms.set_cell(cellCopy, scale_atoms = True)
+
         return EST
 
     def _getElasticCompliance(self, atoms):
         # Obtain the top left 3*3 elastic compliance tensor
         EST = self._getElasticStiffness(atoms)
-        # print EST
         ECT = np.linalg.inv(EST)
-        # print ECT
         return ECT
 
     def _getDefectStrainTensor(self, EDT, ECT):
@@ -268,7 +324,7 @@ class Vacancy(object):
         DST = np.zeros((3, 3))
         EDTDiag = np.diagonal(EDT)
         for i in range(3):
-            DST[i][i] = np.sum(np.diagonal(EDT) * ECT[i])
+            DST[i][i] = np.sum(EDTDiag * ECT[i, :])
         return DST
 
     def _getSizeResult(self, size):
@@ -293,8 +349,10 @@ class Vacancy(object):
         res = {}
 
         # Obtain fmax induced error (md error)
-        res['fmax-uncert'] = self._getFmaxUncert(initial)
-        F.clock('fmax uncert')
+        fmaxEnergyUncert, fmaxEDTUncert = self._getFmaxUncert(initial)
+        res['fmax-energy-uncert'] = fmaxEnergyUncert
+        res['fmax-edt-uncert'] = fmaxEDTUncert
+        F.clock('fmax uncert obtained')
 
         # sys.exit(0)
 
@@ -325,8 +383,10 @@ class Vacancy(object):
         SPEDT = (stress2 - stress0) / nd
         res['saddle-point-elastic-dipole-tensor'] = SPEDT
 
-        F.clock('finish')
-        print res
+        # Print results for size
+        F.printDict(res)
+
+        F.clock('size finished')
         return res
 
     def _getFit(self, xdata, ydata, orders):
@@ -336,22 +396,21 @@ class Vacancy(object):
             ydataShape = ydata.shape
             ydataNew = ydata.reshape((ydataShape[0], -1))
             res = self._getFit(xdata, ydataNew, orders)
-            print ydataShape[1:]
             res = res.reshape((len(orders), ) + ydataShape[1:])
             return res
 
         # Return fitted results Corresponding to the orders as np array
         A = []
-        print '[Fitting]'
-        print 'xdata:', xdata
-        print 'ydata:', ydata
-        print 'Orders:', orders
+        # print '[Fitting]'
+        # print 'xdata:', xdata
+        # print 'ydata:', ydata
+        # print 'Orders:', orders
         for order in orders:
             A.append(np.power(xdata * 1.0, order))
         A = np.vstack(A).T
         res = np.linalg.lstsq(A, ydata)
         res = res[0]
-        print 'Results:', res
+        # print 'Results:', res
         return res
 
     def _extrapolate(self, sizes, sizeResults):
@@ -362,7 +421,7 @@ class Vacancy(object):
             tmp = np.array([sizeResults[i][prop] for i in range(nSizes)])
             propValues[prop] = tmp
 
-        print propValues
+        F.printDict(propValues)
 
         def _checkProp(prop):
             assert prop in properties, prop + ' not found'
@@ -375,56 +434,43 @@ class Vacancy(object):
             fitRes = self._getFit(sizesNew, valuesNew, orders)
             return fitRes[0]
 
-        def _format(value, unit = '', uncert = ''):
-            if type(value) == np.ndarray:
-                value = value.tolist()
-            res = {
-                'source-value': value
-            }
-            if unit != '':
-                res['source-unit'] = unit
-            if uncert != '':
-                if type(uncert) == np.ndarray:
-                    uncert = uncert.tolist()
-                res['source-std-uncert-value'] = uncert
-            return res
-
         def _getValueUncert(prop, orders, nPts, nPtsUncert, sysUncert):
-            print 'extrapolating', prop
+            F.clock('extrapolating ' + prop)
             _checkProp(prop)
-            val = _extProp(prop, [0, -3], nPts)
-            val2 = _extProp(prop, [0, -3], nPtsUncert)
+            val = _extProp(prop, orders, nPts)
+            val2 = _extProp(prop, orders, nPtsUncert)
             uncert = np.sqrt(np.abs(val - val2)**2 + sysUncert**2)
             return val, uncert
 
-        _checkProp('fmax-uncert')
-        fmaxUncert = np.max(propValues['fmax-uncert'])
+        _checkProp('fmax-energy-uncert')
+        fmaxEnergyUncert = np.max(propValues['fmax-energy-uncert'][-3:])
+        fmaxEDTUncert = np.max(propValues['fmax-edt-uncert'][-3:], axis = 0)
 
-        res = {} # Object for return
+        res = self._res # Object for return
 
         # Extrapolate vacancy formation energy
         VFE, VFEUncert = _getValueUncert(
             'vacancy-formation-energy',
-            [0, -3], 3, 2, fmaxUncert
+            [0, -3], 3, 2, fmaxEnergyUncert
         )
         res['vacancy-formation-energy'] = _format(VFE, 'eV', VFEUncert)
 
         # Extrapolate vacancy migration energy
         VME, VMEUncert = _getValueUncert(
             'vacancy-migration-energy',
-            [0, -3], 3, 2, fmaxUncert
+            [0, -3], 3, 2, fmaxEnergyUncert
         )
         res['vacancy-migration-energy'] = _format(VME, 'eV', VMEUncert)
 
         # Extrapolate elastic dipole tensors
         EDT, EDTUncert = _getValueUncert(
             'elastic-dipole-tensor',
-            [0, -3], 3, 2, fmaxUncert
+            [0, -3], 3, 2, fmaxEDTUncert
         )
         res['elastic-dipole-tensor'] = _format(EDT, 'eV', EDTUncert)
         SPEDT, SPEDTUncert = _getValueUncert(
             'saddle-point-elastic-dipole-tensor',
-            [0, -3], 3, 2, fmaxUncert
+            [0, -3], 3, 2, fmaxEDTUncert
         )
         res['saddle-point-elastic-dipole-tensor'] = _format(SPEDT, 'eV', SPEDTUncert)
 
@@ -433,7 +479,8 @@ class Vacancy(object):
             'defect-strain-tensor',
             [0, -3], 3, 2, 0.0
         )
-        DSTUncert = np.sqrt(DSTUncert**2 + (fmaxUncert / VFE * DST)**2)
+        DSTSysUncert = fmaxEDTUncert / (EDT + C.EPS) * DST
+        DSTUncert = np.sqrt(DSTUncert**2 + DSTSysUncert**2)
         res['defect-strain-tensor'] = _format(DST, 'angstrom^3', DSTUncert)
 
         # Extrapolate vacancy relxation volume
@@ -441,8 +488,7 @@ class Vacancy(object):
         RVUncert = np.sqrt(np.sum(np.diagonal(np.array(DSTUncert))**2))
         res['vacancy-relxation-volume'] = _format(RV, 'angstrom^3', RVUncert)
 
-        resStr = json.dumps(res, separators = (' ',' '), indent = 2)
-        print resStr
+        F.printDict(res)
 
     def run(self):
         # Determine sizes of the supercell
@@ -452,9 +498,9 @@ class Vacancy(object):
 
         # Obtain common variables
         supercell = self._createSupercell(minSize.astype(int))
-        self.ECT = self._getElasticCompliance(self.basis)
+        self.ECT = self._getElasticCompliance(supercell)
         print self.ECT
-        
+
         # Obtain results for each size
         sizeResults = []
         for i in range(sizes.shape[0]):
@@ -463,6 +509,40 @@ class Vacancy(object):
 
         self.res = self._extrapolate(sizes, sizeResults)
 
+    def _saveAtoms(self, filename, atoms):
+        path = 'output/%s.cif' % filename
+        self._cifs.append(path)
+        write(path, atoms, format = 'cif')
+
+    def _addInfo(self):
+        res = self._res
+        res['missing-atom-wyckoff-site-start'] = _format(0)
+        res['missing-atom-wyckoff-site-end'] = _format(0)
+        res['vacancy-short-name-start'] = _format('tetrahedral')
+        res['vacancy-short-name-end'] = _format('tetrahedral')
+        res['vacancy-migration-direction'] = _format(self.migration)
+        res['missing-atom-species'] = _format(self.elem)
+        res['vacancy-position-start'] = _format(np.zeros(3))
+        res['vacancy-position-end'] = _format(self.migration)
+        res['vacancy-short-name-start'] = _format('')
+        res['cauchy-stress'] = _format(np.zeros(6), 'GPa')
+        res['temperature'] = _format(0.0, 'K')
+
+        # Supercell structure
+        tar = tarfile.open("output/structure.tgz", "w:gz")
+        for cif in self._cifs:
+            tar.add(cif)
+        tar.close()
+        structuralProps = [
+            'vacancy-unrelaxed-structure-start',
+            'vacancy-unrelaxed-structure-end',
+            'vacancy-relxed-structure-start',
+            'vacancy-relaxed-structure-end',
+            'vacancy-relaxed-structure-saddle-point',
+        ]
+        for prop in structuralProps:
+            res[prop] = _format('structure.tgz')
 
     def getResult(self):
-        return self.res
+        self._addInfo()
+        return self._res

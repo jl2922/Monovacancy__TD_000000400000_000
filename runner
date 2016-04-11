@@ -18,37 +18,43 @@ Author: Junhao Li <streaver91@gmail.com>
 import sys
 import re
 import json
-import math
-from collections import OrderedDict
-from scipy.optimize import fmin
-from scipy.interpolate import interp1d
-import numpy as np
+import os
+import re
 
-# ASE Modules
-try:
-    from ase.lattice import bulk
-    print 'Imported bulk from ase.lattice' # For ASE version 3.9
-except ImportError:
-    from ase.structure import bulk
-    print 'Imported bulk from ase.structure' # For ASE version <= 3.8
-from ase.optimize import FIRE, QuasiNewton, MDMin
-from ase.data import chemical_symbols
-from ase.data import reference_states
-from ase import Atoms, Atom
-from ase.io import write
-from ase.constraints import FixAtoms
-from ase.neb import NEB
-
-# KIM Modules
-from kimcalculator import *
-from kimservice import KIM_API_get_data_double
-
+# Vacancy Driver Modules
 import config as C
+import functions as F
 from vacancy import Vacancy
 
 # Generate OrderedDict for all properties to report
 def packResult(res):
-    print res
+    print '[Packing results]'
+    instanceId = 1 # Instance id start from 1
+    driverPath = os.path.dirname(os.path.abspath(__file__))
+    instances = []
+    for pd in C.PROPERTY_DEFINITIONS:
+        F.clock('packing results for: ' + pd)
+        instance = {
+            'instance-id': instanceId
+        }
+        with open(driverPath + ('/definitions/%s.edn' % pd), 'r') as f:
+            content = f.read()
+            tmp = re.search('property-id\" \"([^\"]+)\"', content, re.M)
+            propertyId = tmp.group(1)
+            instance['property-id'] = propertyId
+            tmp = re.findall('\"([^\"]+)\" \{', content)
+            for prop in tmp:
+                propValKey = prop # Alias name in res
+                if prop[:5] == 'host-':
+                    propValKey = prop[5:]
+                elif prop[:10] == 'reservoir-':
+                    propValKey = prop[10:]
+                if propAlias in res:
+                    instance[prop] = res[propValKey]
+        print instance
+        instances.append(instance)
+        instanceId += 1
+    return instances
 
 def main():
     # Obtain raw inputs
@@ -72,18 +78,16 @@ def main():
     # Obtain Results and pack into OrderedDict
     vacancy.run()
 
-    sys.exit(0)
-
     res = vacancy.getResult()
-    res = packResult(res)
+    instances = packResult(res)
 
     # Output results
-    res = json.dumps(res, separators = (' ',' '), indent = 2)
+    insEdn = json.dumps(instances, separators = (' ',' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
-        f.write(res)
-    resJson = json.dumps(res, indent = 2)
+        f.write(insEdn)
+    insJson = json.dumps(instances, indent = 2)
     with open(os.path.abspath('output/results.json'), 'w') as f:
-        f.write(resJson)
+        f.write(insJson)
 
 if __name__ == '__main__':
     main()

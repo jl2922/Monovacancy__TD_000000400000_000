@@ -8,6 +8,17 @@ from scipy.interpolate import interp1d
 import numpy as np
 import datetime
 
+def partialD(fn, x0, index, dx = 1.0e-3):
+	# Calculate partial derivative with respect to index at x0
+	dx0 = np.zeros_like(x0)
+	dx0[index] = dx
+	fnP2 = fn(x0 + 2 * dx0)
+	fnP = fn(x0 + dx0)
+	fnM = fn(x0 - dx0)
+	fnM2 = fn(x0 - 2 * dx0)
+	partialD = (-1 * fnP2 + 8 * fnP - 8 * fnM + fnM2) / (12 * dx)
+	return partialD
+
 def fmin_jh(
 	func,
 	x0,
@@ -50,6 +61,11 @@ def fmax_jh(func, x0, args = (), xtol = 0.0001, ftol = 0.0001):
 	)
 	res[0] += x0
 	return res
+
+def printDict(obj):
+	for key in obj:
+		print key + ':'
+		print ' ', obj[key]
 
 def clock(msg):
 	print datetime.datetime.now().time(), msg

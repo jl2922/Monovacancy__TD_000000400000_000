@@ -5,36 +5,25 @@
 DEBUG = 1
 
 # Accuracy related parameters
-FMAX_TOL = 1e-3 # absolute
-FIRE_MAX_STEPS = 200
-MDMIN_MAX_STEPS = 200
-MIN_ATOMS = 50
-NEB_POINTS = 20
+FMAX_TOL = 1.0e-3 # absolute
+FIRE_MAX_STEPS = 500
+MDMIN_MAX_STEPS = 500
+MIN_ATOMS = 100
+NEB_POINTS = 15
 UNCERT_STEPS = 20
-EPS = 1e-10
+EPS = 1.0e-6
 STRESS_DX = 1.0e-3
 NUM_SIZES = 3
+
 # Parameters for Debugging
 if DEBUG == 1:
     FMAX_TOL = 50.0e-3 # absolute
-    NEB_POINTS = 9
+    NEB_POINTS = 15
 
 # Logs output
 FIRE_LOGFILE = 'fire.log'
 MDMIN_LOGFILE = 'mdmin.log'
-OUTPUT_BASIS = True
-
-# Extrapolation Parameters
-FITS_CNT = [2, 3] # Number of data points used for each fitting
-FITS_ORDERS = [
-    [0, -3],
-    [0, -3],
-] # Number of orders included in each fitting
-# Fit Results Used (Corresponding to the above)
-FITS_VFE_VALUE = 0 # Vacancy Formation Energy
-FITS_VFE_UNCERT = [1]
-FITS_VME_VALUE = 0 # Vacancy Migration Energy
-FITS_VME_UNCERT = [1]
+SAVE_BASIS = True
 
 # Conversion constants
 e = 1.602176565e-19
@@ -68,5 +57,11 @@ WYCKOFF_SITES = {
     'diamond': [[0.0, 0.0, 0.0]],
     'hcp': [[2.0 / 3.0, 1.0 / 3.0, 0.25]],
 }
-VFE_PROP_ID = 'tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-formation-free-energy-crystal-npt'
-VME_PROP_ID = 'tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-migration-energy-crystal-npt'
+PROPERTY_DEFINITIONS = [
+    'monovacancy-neutral-formation-free-energy-crystal-npt',
+    'monovacancy-neutral-migration-energy-crystal-npt',
+    'monovacancy-neutral-elastic-dipole-tensor-crystal-npt',
+    'monovacancy-neutral-migration-saddle-point-elastic-dipole-tensor-crystal-npt',
+    'monovacancy-neutral-defect-strain-tensor-crystal-npt',
+    'monovacancy-neutral-relaxation-volume-crystal-npt'
+]

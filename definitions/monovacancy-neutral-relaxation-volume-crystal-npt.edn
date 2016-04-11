@@ -1,0 +1,162 @@
+{
+  "property-id" "tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-relaxation-volume-crystal-npt"
+
+  "property-title" "Volume change from relaxation of neighboring atoms around a neutral vacant atom site in a crystal at finite temperature and a given stress state"
+
+  "property-description" "Volume change from relaxation of neighboring atoms around a neutral vacant atom site at a given stress state in a (possibly multispecies) infinite host crystal lattice at finite temperature."
+
+  "vacancy-relaxation-volume" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description" "The change in volume associated with the contraction around a vacant atom site in an infinitely large crystal due to the relaxation of neighboring atoms."
+  }
+  "missing-atom-species" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       []
+    "required"     true
+    "description"  "The element symbol of the atomic species corresponding to the atom being removed from the lattice."
+  }
+  "vacancy-position" {
+    "type"         "float"
+    "has-unit"     false
+    "extent"       [3]
+    "required"     false
+    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the conventional unit cell. If there are several equivalent positions, the smallest non-negative fractional x, y and z coordinates are taken."
+  }
+  "vacancy-short-name" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       []
+    "required"     false
+    "description"  "System-specific short name describing the type of vacancy formed (e.g. 'split', 'tetrahedral', 'hexagonal', 'dumbbell', etc.)."
+  }
+  "vacancy-unrelaxed-structure" {
+    "type"         "file"
+    "has-unit"     false
+    "extent"       []
+    "required"     false
+    "description"  "A file containing the atomic configuration including information such as the species, x,y,z coordinates of each particle before relaxation, and super-cell periodicity data for the computed unrelaxed vacancy."
+  }
+  "vacancy-relaxed-structure" {
+    "type"         "file"
+    "has-unit"     false
+    "extent"       []
+    "required"     false
+    "description"  "A file containing the atomic configuration including information such as the species, x,y,z coordinates of each particle after relaxation, and super-cell periodicity data for the computed relaxed vacancy."
+  }
+  "missing-atom-wyckoff-site" {
+    "type"         "int"
+    "has-unit"     false
+    "extent"       []
+    "required"     false
+    "description" "The index of the Wyckoff site corresponding to the missing atom (if known).  This value refers to the ordering in 'wyckoff-multiplicity-and-letter' and ranges from one to the number of unique Wyckoff sites in the crystal."
+  }
+  "basis-atom-coordinates" {
+    "type"         "float"
+    "has-unit"     false
+    "extent"       [":",3]
+    "required"     true
+    "description"  "Fractional coordinates of the basis atoms in the conventional unit cell.  If the unit cell vectors are denoted by <a>, <b>, and <c>, and the fractional coordinates of atom 'i' are [afrac_i, bfrac_i, cfrac_i], the value of ‘basis-atom-coordinates' will be of the form [[afrac_1 bfrac_1 cfrac_1] [afrac_2 bfrac_2 cfrac_2] ... ].  All components of each basis atom should be between zero and one, inclusive of zero."
+  }
+  "basis-atom-species" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       [":"]
+    "required"     true
+    "description"  "The element symbols of the basis atoms.  The order in which the species are specified must correspond to the order of the atoms listed in ‘basis-atom-coordinates'."
+  }
+  "basis-short-name" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       [":"]
+    "required"     false
+    "description"  "Short name describing the crystal type (e.g. fcc, bcc, diamond)."
+  }
+  "a" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average length of the crystal unit cell vector <a>.  The associated direction must correspond to the first component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+  }
+  "b" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average length of the crystal unit cell vector <b>.  The associated direction must correspond to the second component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+  }
+  "c" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average length of the crystal unit cell vector <c>.  The associated direction must correspond to the second component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+  }
+  "alpha" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average angle between the crystal unit cell vectors <b> and <c>. Must be strictly greater than zero and strictly less than 90 degrees."
+  }
+  "beta" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average angle between the crystal unit cell vectors <a> and <c>. Must be strictly greater than zero and strictly less than 90 degrees."
+  }
+  "gamma" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "The average angle between the crystal unit cell vectors <a> and <b>. Must be strictly greater than zero and strictly less than 90 degrees."
+  }
+  "space-group" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       []
+    "required"     false
+    "description"  "Hermann-Mauguin designation for the space group associated with the symmetry of the crystal (e.g. Immm, Fm-3m, P6_3/mmc)."
+  }
+  "wyckoff-multiplicity-and-letter" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       [":"]
+    "required"     false
+    "description"  "Multiplicity and standard letter of the unique Wyckoff sites (e.g. 4a, 2b) needed to generate the lattice from its fully symmetry-reduced description.  The order of elements in this array must correspond to the order of the entries listed in 'wyckoff-coordinates' and 'wyckoff-species'."
+  }
+  "wyckoff-coordinates" {
+    "type"         "float"
+    "has-unit"     false
+    "extent"       [":",3]
+    "required"     false
+    "description"  "Coordinates of the unique Wyckoff sites needed to generate the lattice from its fully symmetry-reduced description, given as fractions of the crystal lattice vectors.  The origin used to specify the Wyckoff coordinates is assumed to correspond to the standard/default setting (see http://www.cryst.ehu.es/cgi-bin/cryst/programs/nph-def-choice).  The order of elements in this array must correspond to the order of the entries listed in 'wyckoff-multiplicity-and-letter' and 'wyckoff-species'."
+  }
+  "wyckoff-species" {
+    "type"         "string"
+    "has-unit"     false
+    "extent"       [":"]
+    "required"     false
+    "description"  "The element symbol of the atomic species of the unique Wyckoff sites used to generate the crystal from its fully symmetry-reduced description.  The order of the entries must correspond to the order of the entries in 'wyckoff-coordinates' and 'wyckoff-multiplicity-and-letter'."
+  }
+  "temperature" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       []
+    "required"     true
+    "description"  "Temperature of the crystal."
+  }
+  "cauchy-stress" {
+    "type"         "float"
+    "has-unit"     true
+    "extent"       [6]
+    "required"     true
+    "description"  "The [xx,yy,zz,yz,xz,xy] (i.e. [11,22,33,23,13,12]) components of the Cauchy stress acting on the periodic cell of the crystal.  The orthonormal basis (<e_1>,<e_2>,<e_3>) used to express the stress should be such that e_1 is in the direction of <a>, e_2 is in the direction of (<c> x <a>), and e_3 is in the direction of (<e_1> x <e_2>)."
+  }
+}
