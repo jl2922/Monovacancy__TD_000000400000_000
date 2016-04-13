@@ -10,32 +10,35 @@ FIRE_MAX_STEPS = 500
 MDMIN_MAX_STEPS = 500
 MIN_ATOMS = 100
 NEB_POINTS = 15
-UNCERT_STEPS = 20
 EPS = 1.0e-6
 STRESS_DX = 1.0e-3
-NUM_SIZES = 3
+NUM_SIZES = 5
 
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 50.0e-3 # absolute
-    NEB_POINTS = 15
+    FMAX_TOL = 0.02e-3 # absolute
+    NEB_POINTS = 18
+    MIN_ATOMS = 200
+    FIRE_MAX_STEPS = 2000
+    MDMIN_MAX_STEPS = 2000
+    # FMAX_TOL = 0.1e-3 # absolute
+    # NEB_POINTS = 8
+    # MIN_ATOMS = 3000
 
 # Logs output
-FIRE_LOGFILE = 'fire.log'
-MDMIN_LOGFILE = 'mdmin.log'
+FIRE_LOGFILE = 'output/fire.log'
+MDMIN_LOGFILE = 'output/mdmin.log'
 SAVE_BASIS = True
+SAVE_JSON = True
+REMOVE_CIFS = True
+OUTPUT_INSTANCES = False
 
 # Conversion constants
-e = 1.602176565e-19
-A = 1.0e-10
-eVoverA32GPa = e / A**3 / 1.0e9 # Convert eV to GPa
+eV = 1.602176565e-19
+angstrom = 1.0e-10
+toGPa = eV / angstrom**3 / 1.0e9 # Convert eV to GPa
 
-# Output Configuration
-UNIT_ENERGY = 'eV'
-UNIT_LENGTH = 'angstrom'
-UNIT_ANGLE = 'degree'
-UNIT_PRESSURE = 'GPa'
-UNIT_VOLUME = UNIT_LENGTH + '^3'
+# Output information
 SPACE_GROUPS = {
     'fcc': 'Fm-3m',
     'bcc': 'Im-3m',
@@ -65,3 +68,8 @@ PROPERTY_DEFINITIONS = [
     'monovacancy-neutral-defect-strain-tensor-crystal-npt',
     'monovacancy-neutral-relaxation-volume-crystal-npt'
 ]
+ALIASES = {
+    'vacancy-formation-energy': 'vacancy-formation-free-energy',
+    'basis-atom-species': 'species',
+    'basis-short-name': 'short-name',
+}

@@ -32,26 +32,33 @@ def packResult(res):
     instanceId = 1 # Instance id start from 1
     driverPath = os.path.dirname(os.path.abspath(__file__))
     instances = []
+    # Loop through each property definition
     for pd in C.PROPERTY_DEFINITIONS:
-        F.clock('packing results for: ' + pd)
+        print 'packing results for: ' + pd
         instance = {
             'instance-id': instanceId
         }
         with open(driverPath + ('/definitions/%s.edn' % pd), 'r') as f:
             content = f.read()
+            # Obtain property id
             tmp = re.search('property-id\" \"([^\"]+)\"', content, re.M)
             propertyId = tmp.group(1)
             instance['property-id'] = propertyId
+            # Obtain property keys
             tmp = re.findall('\"([^\"]+)\" \{', content)
             for prop in tmp:
-                propValKey = prop # Alias name in res
+                resKey = prop # corresponding key in res object
                 if prop[:5] == 'host-':
-                    propValKey = prop[5:]
+                    resKey = prop[5:]
                 elif prop[:10] == 'reservoir-':
-                    propValKey = prop[10:]
-                if propAlias in res:
-                    instance[prop] = res[propValKey]
-        print instance
+                    resKey = prop[10:]
+                if resKey in res:
+                    instance[prop] = res[resKey]
+                else:
+                    print 'missing:', prop
+        if C.OUTPUT_INSTANCES:
+            print 'results:'
+            F.printDict(instance)
         instances.append(instance)
         instanceId += 1
     return instances
@@ -69,15 +76,14 @@ def main():
     if lattice == 'hcp':
         latticeConsts = [float(latticeConstA), float(latticeConstC)]
     else:
-        latticeConsts = [float(latticeConstA)] # Ignore latticeConstC
+        latticeConsts = [float(latticeConstA)]
 
     # Create Instance
     migration = [1.0, 0.0, 0.0]
     vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
-    # Obtain Results and pack into OrderedDict
+    # Obtain Results and pack them into required format
     vacancy.run()
-
     res = vacancy.getResult()
     instances = packResult(res)
 
@@ -85,9 +91,12 @@ def main():
     insEdn = json.dumps(instances, separators = (' ',' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(insEdn)
-    insJson = json.dumps(instances, indent = 2)
-    with open(os.path.abspath('output/results.json'), 'w') as f:
-        f.write(insJson)
+    if C.SAVE_JSON:
+        insJson = json.dumps(instances, indent = 2)
+        with open(os.path.abspath('output/results.json'), 'w') as f:
+            f.write(insJson)
+
+    F.clock('test completed')
 
 if __name__ == '__main__':
     main()

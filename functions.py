@@ -49,23 +49,20 @@ def fmin_jh(
 	resNew = (res[0] + x0,) + res[1:]
 	return resNew
 
-def fmax_jh(func, x0, args = (), xtol = 0.0001, ftol = 0.0001):
+def fmax_jh(func, x0, xtol = 0.0001, ftol = 0.0001):
 	def fshifted(x):
-		return -func(x + x0)
-	res = fmin(
-		fshifted,
-		np.zeros_like(x0),
-		args = args,
-		xtol = xtol,
-		ftol = ftol
-	)
-	res[0] += x0
-	return res
+		return -1.0 * func(x + x0)
+	res = fmin(fshifted, np.zeros_like(x0),	xtol = xtol, ftol = ftol)
+	print res
+	return res + x0
 
 def printDict(obj):
 	for key in obj:
 		print key + ':'
-		print ' ', obj[key]
+		val = obj[key]
+		if type(val) == np.ndarray:
+			val = val.tolist()
+		print ' ', val
 
 def clock(msg):
 	print datetime.datetime.now().time(), msg
