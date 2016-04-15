@@ -17,8 +17,8 @@ MIGRATION = (0.5, 0.5, 0.0)
 
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 50.1e-3 # absolute
-    NEB_POINTS = 18
+    FMAX_TOL = 5.0e-3 # absolute
+    NEB_POINTS = 12
     MIN_ATOMS = 100
     FIRE_MAX_STEPS = 2000
     MDMIN_MAX_STEPS = 2000

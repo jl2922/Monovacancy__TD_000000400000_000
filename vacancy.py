@@ -528,7 +528,7 @@ class Vacancy(object):
         tar = tarfile.open("output/structure.tgz", "w:gz")
         for cif in self._cifs:
             tar.add(cif)
-            # os.remove(cif)
+            os.remove(cif)
         tar.close()
         structuralProps = [
             'vacancy-unrelaxed-structure-start',
