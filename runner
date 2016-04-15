@@ -100,9 +100,15 @@ def main():
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(insEdn)
     if C.SAVE_JSON:
-        res['model'] = model
-        res['lattice'] = lattice
-        res['elem'] = elem
+        res['info'] = {
+            'model': model,
+            'lattice': lattice,
+            'elem': elem,
+            'fmax': C.FMAX_TOL,
+            'neb-points': C.NEB_POINTS,
+            'num-sizes': C.NUM_SIZES,
+            'min-atoms': C.MIN_ATOMS
+        }
         resJson = json.dumps(res, indent = 2)
         with open(os.path.abspath('output/summary.json'), 'w') as f:
             f.write(resJson)
