@@ -51,9 +51,12 @@ def fmin_jh(
 
 def fmax_jh(func, x0, xtol = 0.0001, ftol = 0.0001):
 	def fshifted(x):
-		return -1.0 * func(x + x0)
+		val = -1.0 * func(x + x0)
+		print 'evaluating x =', x
+		print 'func =', val
+		return val
 	res = fmin(fshifted, np.zeros_like(x0),	xtol = xtol, ftol = ftol)
-	print res
+	print res + x0
 	return res + x0
 
 def printDict(obj):

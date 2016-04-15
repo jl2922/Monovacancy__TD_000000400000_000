@@ -12,13 +12,14 @@ MIN_ATOMS = 100
 NEB_POINTS = 15
 EPS = 1.0e-6
 STRESS_DX = 1.0e-3
-NUM_SIZES = 5
+NUM_SIZES = 3
+MIGRATION = (0.5, 0.5, 0.0)
 
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 0.02e-3 # absolute
+    FMAX_TOL = 50.1e-3 # absolute
     NEB_POINTS = 18
-    MIN_ATOMS = 200
+    MIN_ATOMS = 100
     FIRE_MAX_STEPS = 2000
     MDMIN_MAX_STEPS = 2000
     # FMAX_TOL = 0.1e-3 # absolute

@@ -145,10 +145,6 @@ class Vacancy(object):
         res['wyckoff-coordinates'] = _format(C.WYCKOFF_SITES[lattice])
         res['wyckoff-species'] = _format([elem])
 
-        basis.set_calculator(KIMCalculator(self.model))
-        enCoh = basis.get_potential_energy() / basis.get_number_of_atoms()
-        res['free-energy-per-atom'] = _format(enCoh, 'eV')
-
         if C.SAVE_BASIS == True:
             write('output/basis.cif', basis, format = 'cif')
         return basis
@@ -182,7 +178,7 @@ class Vacancy(object):
         # Find the id of positions closest to position
         positionsCopy = positions.copy()
         positionsCopy -= position
-        dist = np.sum(positionsCopy**2, axis = 0)
+        dist = np.sum(positionsCopy**2, axis = 1)
         return np.argmin(dist)
 
     def _getInitialFinal(self, supercell):
@@ -198,6 +194,7 @@ class Vacancy(object):
         cellSize = np.diagonal(self.basis.get_cell())
         migration = cellSize * np.array(self.migration)
         movedAtomId = self._findAtomId(finalPositions, migration)
+        print 'atom #%d moved from ' % movedAtomId, finalPositions[movedAtomId]
         finalPositions[movedAtomId] = np.array([0.0, 0.0, 0.0])
         final.set_positions(finalPositions)
         self._saveAtoms('unrelaxedFinal%d' % nAtoms, initial)
@@ -293,12 +290,6 @@ class Vacancy(object):
 
         return EST
 
-    def _getElasticCompliance(self, atoms):
-        # Obtain the top left 3*3 elastic compliance tensor
-        EST = self._getElasticStiffness(atoms)
-        ECT = np.linalg.inv(EST)
-        return ECT
-
     def _getDefectStrainTensor(self, EDT):
         # Compute defect strain tensor from:
         # EDT: elastic dipole tensor
@@ -355,8 +346,8 @@ class Vacancy(object):
         # Refine results with high precision for a few more steps
         initialRefined = initial.copy()
         initialRefined.set_calculator(KIMCalculator(self.model))
-        self._relaxAtoms(initialRefined, tol = C.FMAX_TOL * C.EPS, steps = 10)
-        self._relaxPath(images, tol = C.FMAX_TOL * C.EPS, steps = 10)
+        self._relaxAtoms(initialRefined, tol = C.FMAX_TOL * C.EPS, steps = 5)
+        self._relaxPath(images, tol = C.FMAX_TOL * C.EPS, steps = 5)
         F.clock('results refined')
 
         # Record refined values
@@ -381,7 +372,7 @@ class Vacancy(object):
         # Save refined results as final results
         # Save difference as uncertainty
         def saveSizeRes(prop, valueInit, valueRefined, sysUncert = 0.0):
-            sizeRes[prop] = valueRefined
+            sizeRes[prop] = valueInit
             propUncert = np.abs(valueRefined - valueInit)
             propUncert = np.sqrt(propUncert**2 + sysUncert**2)
             sizeRes[prop + '-uncert'] = propUncert
@@ -509,7 +500,16 @@ class Vacancy(object):
 
         # Obtain common variables
         supercell = self._createSupercell(minSize.astype(int))
-        self.ECT = self._getElasticCompliance(supercell)
+        EST = self._getElasticStiffness(supercell)
+        ECT = np.linalg.inv(EST)
+        self.ECT = ECT
+
+        # Add EST and ECT to res
+        res = self._res
+        res['partial-elastic-stiffness-tensor'] = _format(EST)
+        res['partial-elastic-compliance-tensor'] = _format(ECT)
+        enCoh = supercell.get_potential_energy() / supercell.get_number_of_atoms()
+        res['free-energy-per-atom'] = _format(enCoh, 'eV')
 
         # Obtain results for each size
         sizeResults = []
@@ -528,7 +528,7 @@ class Vacancy(object):
         tar = tarfile.open("output/structure.tgz", "w:gz")
         for cif in self._cifs:
             tar.add(cif)
-            os.remove(cif)
+            # os.remove(cif)
         tar.close()
         structuralProps = [
             'vacancy-unrelaxed-structure-start',

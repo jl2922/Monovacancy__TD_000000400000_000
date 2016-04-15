@@ -63,7 +63,15 @@ def packResult(res):
         instanceId += 1
     return instances
 
+def printKeyConfig():
+    print '[Config]'
+    print 'FMAX_TOL:', C.FMAX_TOL
+    print 'NEB_POINTS:', C.NEB_POINTS
+    print 'MIN_ATOMS:', C.MIN_ATOMS
+    print 'NUM_SIZES:', C.NUM_SIZES
+
 def main():
+    printKeyConfig()
     # Obtain raw inputs
     elem = raw_input()
     lattice = raw_input()
@@ -79,7 +87,7 @@ def main():
         latticeConsts = [float(latticeConstA)]
 
     # Create Instance
-    migration = [1.0, 0.0, 0.0]
+    migration = C.MIGRATION
     vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
     # Obtain Results and pack them into required format
@@ -92,9 +100,9 @@ def main():
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(insEdn)
     if C.SAVE_JSON:
-        insJson = json.dumps(instances, indent = 2)
-        with open(os.path.abspath('output/results.json'), 'w') as f:
-            f.write(insJson)
+        resJson = json.dumps(res, indent = 2)
+        with open(os.path.abspath('output/summary.json'), 'w') as f:
+            f.write(resJson)
 
     F.clock('test completed')
 
