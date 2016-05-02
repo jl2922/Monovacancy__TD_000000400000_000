@@ -1,9 +1,9 @@
 {
   "property-id" "tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-migration-saddle-point-elastic-dipole-tensor-crystal-npt"
 
-  "property-title" "The elastic dipole tensor at the top of the energy barrier of vacancy migration at finite temperature and given stress state"
+  "property-title" "The Elastic Dipole Tensor at The Top of The Energy Barrier of Vacancy Migration at Finite Temperature and Given Stress State"
 
-  "property-description" "This quantity describes the long-range elastic distortion caused by the migration of the vacancy. Quantitatively, it is the negative of the derivative of the free energy with respect to the bulk strain (Gillan, 1983) at the top of the energy barrier during the vacancy migration."
+  "property-description" "This quantity describes the long-range elastic distortion caused by the vacancy at the migration saddle point. Quantitatively, it is the negative of the derivative of the free energy with respect to the bulk strain (Gillan, 1983) at the top of the energy barrier during the vacancy migration. Note that, unlike the energy barrier that is the difference in energy between the saddlepoint and the ground state, this does not subtract the elastic dipole of the ground state vacancy."
 
   "saddle-point-elastic-dipole-tensor" {
     "type"         "float"
@@ -12,19 +12,19 @@
     "required"     true
     "description"  "The [xx,yy,zz,yz,xz,xy] (i.e. [11,22,33,23,13,12]) components of the elastic dipole tensor at the top of the energy barrier during the vacancy migration. The orthonormal basis (<e_1>,<e_2>,<e_3>) used to express the tensor should be such that e_1 is in the direction of <a>, e_2 is in the direction of (<c> x <a>), and e_3 is in the direction of (<e_1> x <e_2>). The expected form should be [a b c d e f]."
   }
-  "vacancy-migration-direction" {
-    "type"         "float"
-    "has-unit"     false
-    "extent"       [3]
-    "required"     true
-    "description"  "This quantity describes the direction of from the starting position of the vacancy to the ending position of the vacancy. It shall be expressed in fractional coordinates relative to the conventional unit cell and corresponds to 'vacancy-position-start', with the absolute value of the fractional coordinates add up to one. If there are several equivalent migration directions, the largest fractional x, y and z coordinates are taken."
-  }
   "missing-atom-species" {
     "type"         "string"
     "has-unit"     false
     "extent"       []
     "required"     true
     "description"  "The element symbol of the atomic species corresponding to the atom being removed from the lattice."
+  }
+  "vacancy-migration-direction" {
+    "type"         "float"
+    "has-unit"     false
+    "extent"       [3]
+    "required"     false
+    "description"  "This quantity describes the direction of from the starting position of the vacancy to the ending position of the vacancy. It shall be expressed in fractional coordinates relative to the conventional unit cell and corresponds to 'vacancy-position-start', with the absolute value of the fractional coordinates add up to one. If there are several equivalent migration directions, the largest fractional x, y and z coordinates are taken."
   }
   "vacancy-position-start" {
     "type"         "float"
@@ -38,14 +38,14 @@
     "has-unit"     false
     "extent"       [3]
     "required"     false
-    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy at the top of energy barrier during the migration. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the conventional unit cell and corresponds to 'vacancy-position-start', 'vacancy-migration-direction' and 'vacancy-position-end'."
+    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy at the top of energy barrier during the migration. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the conventional unit cell and shall be consistent with to 'vacancy-position-start', 'vacancy-migration-direction' and 'vacancy-position-end'."
   }
   "vacancy-position-end" {
     "type"         "float"
     "has-unit"     false
     "extent"       [3]
     "required"     false
-    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy after migration. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the conventional unit cell and corresponds to 'vacancy-position-start' and 'vacancy-migration-direction'. If this quantity is not provided, it defaults to the first stable equilibrium position encountered along the vacancy migration direction."
+    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy after migration. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the conventional unit cell and shall be consistent with to 'vacancy-position-start' and 'vacancy-migration-direction'. If this quantity is not provided, it defaults to the first stable equilibrium position encountered along the vacancy migration direction."
   }
   "vacancy-short-name-start" {
     "type"         "string"

@@ -1,9 +1,9 @@
 {
   "property-id" "tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-defect-strain-tensor-crystal-npt"
 
-  "property-title" "Defect Strain Tensor of a Neutral Monovacancy in an Infinite Crystal at Finite Temperature and a Given Stress State"
+  "property-title" "Defect Strain Tensor of a Neutral Monovacancy in an Infinite Crystal at Given Temperature and Stress State"
 
-  "property-description" "The defect strain tensor describes the long-range elastic distortions caused by a neutral monovacancy. Quantitatively, it is the chemical strain per unit vacancy concentration induced in a crystal at fixed stress. (Freedman, Roundy, and Arias, 2009). The trace of the tensor gives the relaxation volume."
+  "property-description" "The defect strain tensor describes the long-range elastic distortions caused by a neutral monovacancy in an infinite crystal at a given temperature and stress state. Quantitatively, it is the chemical strain per unit vacancy concentration induced in a crystal at fixed stress (Freedman, Roundy, and Arias, 2009), or equivalently the change in the overall dimention of the crystal due to the inclusion of one vacancy. The trace of the tensor gives the relaxation volume, the change in the volume of the crystal per vacancy."
 
   "defect-strain-tensor" {
     "type"         "float"

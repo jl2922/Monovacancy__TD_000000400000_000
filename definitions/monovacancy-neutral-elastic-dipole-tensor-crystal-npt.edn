@@ -1,9 +1,9 @@
 {
   "property-id" "tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-elastic-dipole-tensor-crystal-npt"
 
-  "property-title" "Elastic Dipole Tensor of a Neutral Monovacancy in an Infinite Crystal at Finite Temperature and a Given Stress State"
+  "property-title" "Elastic Dipole Tensor of a Neutral Monovacancy in an Infinite Crystal at Given Temperature and Stress State"
 
-  "property-description" "The elastic dipole tensor describes the long-range elastic distortions caused by a neutral monovacancy. Quantitatively, it is the negative of the derivative of the free energy of formation with respect to the bulk strain (Gillan, 1983)."
+  "property-description" "The elastic dipole tensor describes the long-range elastic distortions caused by a neutral monovacancy in an infinite crystal at a given temperature and stress state. Quantitatively, it is the negative of the derivative of the free energy of formation with respect to the bulk strain (Gillan, 1983)."
 
   "elastic-dipole-tensor" {
     "type"         "float"

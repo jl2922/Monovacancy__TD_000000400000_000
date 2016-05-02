@@ -1,9 +1,9 @@
 {
   "property-id" "tag:staff@noreply.openkim.org,2016-04-06:property/monovacancy-neutral-formation-free-energy-crystal-npt"
 
-  "property-title" "Formation free energy of a neutral monovacancy in a general crystal at finite temperature and stress"
+  "property-title" "Formation Free Energy of a Neutral Monovacancy in a General Crystal at Given Temperature and Stress"
 
-  "property-description" "Gibbs free energy of formation of a neutral monovacancy in a (possibly multispecies) infinite host crystal lattice at a specific temperature and stress state relative to a given infinite monoatomic reference lattice ('reservoir') at a possibly different temperature and stress state. In the limit of zero temperature this corresponds to the formation energy of the relaxed monovacancy."
+  "property-description" "Gibbs free energy of formation of a neutral monovacancy in an infinite crystal at a given temperature and stress state relative to a given infinite monoatomic reference lattice ('reservoir') at a possibly different temperature and stress state. In the limit of zero temperature this corresponds to the formation energy of the relaxed monovacancy."
 
   "vacancy-formation-free-energy" {
     "type"         "float"
@@ -40,126 +40,126 @@
     "required"     false
     "description" "The free energy per atom of the reservoir crystal under the specified temperature and stress conditions."
   }
-  "host-missing-atom-wyckoff-site" {
+  "missing-atom-wyckoff-site" {
     "type"         "int"
     "has-unit"     false
     "extent"       []
     "required"     false
-    "description" "The index of the Wyckoff site corresponding to the atom being removed from the host lattice (if known).  This value refers to the ordering in 'host-wyckoff-multiplicity-and-letter' and ranges from one to the number of unique Wyckoff sites in the host crystal.  The species of the atom being removed should match the species of the (monoatomic) reservoir crystal."
+    "description" "The index of the Wyckoff site corresponding to the atom being removed from the host lattice (if known).  This value refers to the ordering in 'wyckoff-multiplicity-and-letter' and ranges from one to the number of unique Wyckoff sites in the host crystal.  The species of the atom being removed should match the species of the (monoatomic) reservoir crystal."
   }
-  "host-missing-atom-species" {
+  "missing-atom-species" {
     "type"         "string"
     "has-unit"     false
     "extent"       []
     "required"     true
     "description"  "The element symbol of the atomic species corresponding to the atom being removed from the host lattice."
   }
-  "host-vacancy-position" {
+  "vacancy-position" {
     "type"         "float"
     "has-unit"     false
     "extent"       [3]
     "required"     false
-    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the host conventional unit cell. If there are several equivalent positions, the smallest non-negative fractional x, y and z coordinates are taken."
+    "description"  "This quantity describes the center of the elastic distortion caused by the vacancy. In cases where symmetry is preserved, this is the position of the removed atom. In general, if we characterize the effect of the vacancy as a series of force multipoles at some point, this is the position of the point where the diagonal terms of the force quadruple are zero in the basis that diagonalizes the force dipole. The position shall be expressed in fractional coordinates relative to the host conventional unit cell fields. If there are several equivalent positions, the smallest non-negative fractional x, y and z coordinates are taken."
   }
-  "host-basis-atom-coordinates" {
+  "basis-atom-coordinates" {
     "type"         "float"
     "has-unit"     false
     "extent"       [":",3]
     "required"     true
-    "description"  "Fractional coordinates of the basis atoms in the conventional unit cell.  If the unit cell vectors are denoted by <a>, <b>, and <c>, and the fractional coordinates of atom 'i' are [afrac_i, bfrac_i, cfrac_i], the value of ‘host-basis-atom-coordinates' will be of the form [[afrac_1 bfrac_1 cfrac_1] [afrac_2 bfrac_2 cfrac_2] ... ].  All components of each basis atom should be between zero and one, inclusive of zero."
+    "description"  "Fractional coordinates of the basis atoms in the conventional unit cell.  If the unit cell vectors are denoted by <a>, <b>, and <c>, and the fractional coordinates of atom 'i' are [afrac_i, bfrac_i, cfrac_i], the value of ‘basis-atom-coordinates' will be of the form [[afrac_1 bfrac_1 cfrac_1] [afrac_2 bfrac_2 cfrac_2] ... ].  All components of each basis atom should be between zero and one, inclusive of zero."
   }
-  "host-species" {
+  "basis-species" {
     "type"         "string"
     "has-unit"     false
     "extent"       [":"]
     "required"     true
-    "description"  "The element symbols of the basis atoms.  The order in which the species are specified must correspond to the order of the atoms listed in ‘host-basis-atom-coordinates'."
+    "description"  "The element symbols of the basis atoms.  The order in which the species are specified must correspond to the order of the atoms listed in ‘basis-atom-coordinates'."
   }
-  "host-short-name" {
+  "basis-short-name" {
     "type"         "string"
     "has-unit"     false
     "extent"       [":"]
     "required"     false
     "description"  "Short name describing the host crystal type (e.g. fcc, bcc, diamond)."
   }
-  "host-a" {
+  "a" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
-    "description"  "The average length of the host crystal unit cell vector <a>.  The associated direction must correspond to the first component of the entries of 'host-wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+    "description"  "The average length of the host crystal unit cell vector <a>.  The associated direction must correspond to the first component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
   }
-  "host-b" {
+  "b" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
-    "description"  "The average length of the host crystal unit cell vector <b>.  The associated direction must correspond to the second component of the entries of 'host-wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+    "description"  "The average length of the host crystal unit cell vector <b>.  The associated direction must correspond to the second component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
   }
-  "host-c" {
+  "c" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
-    "description"  "The average length of the host crystal unit cell vector <c>.  The associated direction must correspond to the second component of the entries of 'host-wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
+    "description"  "The average length of the host crystal unit cell vector <c>.  The associated direction must correspond to the second component of the entries of 'wyckoff-coordinates'. The triad (<a>,<b>,<c>) must form a right-handed system."
   }
-  "host-alpha" {
+  "alpha" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
     "description"  "The average angle between the host crystal unit cell vectors <b> and <c>. Must be strictly greater than zero and strictly less than 90 degrees."
   }
-  "host-beta" {
+  "beta" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
     "description"  "The average angle between the host crystal unit cell vectors <a> and <c>. Must be strictly greater than zero and strictly less than 90 degrees."
   }
-  "host-gamma" {
+  "gamma" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
     "description"  "The average angle between the host crystal unit cell vectors <a> and <b>. Must be strictly greater than zero and strictly less than 90 degrees."
   }
-  "host-space-group" {
+  "space-group" {
     "type"         "string"
     "has-unit"     false
     "extent"       []
     "required"     false
     "description"  "Hermann-Mauguin designation for the space group associated with the symmetry of the host crystal (e.g. Immm, Fm-3m, P6_3/mmc)."
   }
-  "host-wyckoff-multiplicity-and-letter" {
+  "wyckoff-multiplicity-and-letter" {
     "type"         "string"
     "has-unit"     false
     "extent"       [":"]
     "required"     false
-    "description"  "Multiplicity and standard letter of the unique Wyckoff sites (e.g. 4a, 2b) needed to generate the host lattice from its fully symmetry-reduced description.  The order of elements in this array must correspond to the order of the entries listed in 'host-wyckoff-coordinates' and 'host-wyckoff-species'."
+    "description"  "Multiplicity and standard letter of the unique Wyckoff sites (e.g. 4a, 2b) needed to generate the host lattice from its fully symmetry-reduced description.  The order of elements in this array must correspond to the order of the entries listed in 'wyckoff-coordinates' and 'wyckoff-species'."
   }
-  "host-wyckoff-coordinates" {
+  "wyckoff-coordinates" {
     "type"         "float"
     "has-unit"     false
     "extent"       [":",3]
     "required"     false
-    "description"  "Coordinates of the unique Wyckoff sites needed to generate the host lattice from its fully symmetry-reduced description, given as fractions of the host crystal lattice vectors.  The origin used to specify the Wyckoff coordinates is assumed to correspond to the standard/default setting (see http://www.cryst.ehu.es/cgi-bin/cryst/programs/nph-def-choice).  The order of elements in this array must correspond to the order of the entries listed in 'host-wyckoff-multiplicity-and-letter' and 'host-wyckoff-species'."
+    "description"  "Coordinates of the unique Wyckoff sites needed to generate the host lattice from its fully symmetry-reduced description, given as fractions of the host crystal lattice vectors.  The origin used to specify the Wyckoff coordinates is assumed to correspond to the standard/default setting (see http://www.cryst.ehu.es/cgi-bin/cryst/programs/nph-def-choice).  The order of elements in this array must correspond to the order of the entries listed in 'wyckoff-multiplicity-and-letter' and 'wyckoff-species'."
   }
-  "host-wyckoff-species" {
+  "wyckoff-species" {
     "type"         "string"
     "has-unit"     false
     "extent"       [":"]
     "required"     false
-    "description"  "The element symbol of the atomic species of the unique Wyckoff sites used to generate the host crystal from its fully symmetry-reduced description.  The order of the entries must correspond to the order of the entries in 'host-wyckoff-coordinates' and 'host-wyckoff-multiplicity-and-letter'."
+    "description"  "The element symbol of the atomic species of the unique Wyckoff sites used to generate the host crystal from its fully symmetry-reduced description.  The order of the entries must correspond to the order of the entries in 'wyckoff-coordinates' and 'wyckoff-multiplicity-and-letter'."
   }
-  "host-temperature" {
+  "temperature" {
     "type"         "float"
     "has-unit"     true
     "extent"       []
     "required"     true
     "description"  "Temperature of the host crystal."
   }
-  "host-cauchy-stress" {
+  "cauchy-stress" {
     "type"         "float"
     "has-unit"     true
     "extent"       [6]
