@@ -2,7 +2,7 @@ VacancyFormationMigration Test Driver
 
 SUMMARY
   
-  This test driver calculates the vacancy formation energy and migration energy at zero temperature and zero pressure.
+  This test driver calculates the vacancy formation energy, migration energy, relaxation volume, elastic dipole and defect strain tensor, and saddle point elastic dipole and defect strain tensor at zero temperature and zero pressure.
   
   It works for all the elements, in either sc, fcc, bcc, diamond or hcp crystal structure.
   
