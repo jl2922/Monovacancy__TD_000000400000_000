@@ -11,10 +11,6 @@ METHOD
   The calculation consists of two steps:
   
   1. Calculate the vacancy formation energy and relaxation volume corresponding to three different sizes of supercell.
-  The minimum size is 3*3*3 cubic unit cells for diamond structure (27 * 8 = 216 atoms).
-  For other structures the minimum size is determined by the smallest number n, which makes n*n*n conventional unit cells has at least the same number of atoms as the above diamond supercell.
-  The other two sizes are the two numbers that follows the minimum size.
-  
   The Calculation of each size starts from constructing the periodic supercell, then take out one atom from the supercell.
   Then it does the relaxation of positions within the supercell to obtain vacancy formation energy.
   After that, it moves the nearest atom to the vacanted site and calculates vacancy migration energy with nudged elastic band method.
