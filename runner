@@ -1,25 +1,23 @@
 #!/usr/bin/env python
 """
-Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
-Works for Both Cubic and HCP Crystals, at 0 K and 0 GPa
+Vacancy Formation and Migration Test Driver
+Works for Both Common Cubic and HCP Crystals, at 0 K and 0 GPa
 
-This test driver first calculates VFE and VME of several fixed size supercells,
-then extrapolates these results to obtain the dilute limit. VME is calculated
-with nudged elastic band method.
+This test driver first performs calculation with several fixed size supercells,
+then extrapolates these results to obtain the dilute limit.
+Migration is obtained with nudged elastic band method.
 
 2016-04-06 Junhao Li <streaver91@gmail.com>
-* change the output format to conform with the new property definition.
-* add the calculation of relaxation volume and elastic multipoles.
-* change the version number to 001
+* Change the output format to conform with the new property definition.
+* Add the calculation of relaxation volume and elastic multipoles.
+* Change the version number to 001
 
 Author: Junhao Li <streaver91@gmail.com>
 """
 # Python Modules
-import sys
 import re
 import json
 import os
-import re
 
 # Vacancy Driver Modules
 import config as C

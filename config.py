@@ -1,5 +1,4 @@
-# Configuration File For:
-# Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
+# Configuration File for Vacancy Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
 
 DEBUG = 1

@@ -1,6 +1,5 @@
-# Commonly used functions
+# Common Functions for Vacancy Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
-# Version: 0.0.2
 
 import sys
 from scipy.optimize import fmin

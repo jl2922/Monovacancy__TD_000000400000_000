@@ -1,5 +1,4 @@
-# Input File For:
-# Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
+# Input File for Vacancy Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
 
 # Obtain Inputs
