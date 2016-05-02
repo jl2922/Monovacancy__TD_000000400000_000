@@ -5,7 +5,7 @@
     "extended-id"   "VacancyFormationMigration__TD_554849987965_001"
     "title"         "vacancy migration and formation energy for cubic and hcp crystals"
     "executables"   ["runner" "test_template/runner"]
-    "source-citations"  "Jónsson, Hannes, Greg Mills, and Karsten W. Jacobsen. 'Nudged elastic band method for finding minimum energy paths of transitions.' Classical and quantum dynamics in condensed phase simulations 1 (1998): 385-404."
+    "source-citations"  "Unpublished paper: Monovacancy Properties from Automated Atomistic Simulation."
     "kim-api-version" "1.6"
     "pipeline-api-version" "1.0"
     "properties" [

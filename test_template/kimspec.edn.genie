@@ -6,7 +6,7 @@
     "disclaimer"    "Computer generated"
     "domain"        "openkim.org"
     "executables"   ["runner"]
-    "source-citations"  "TBA"
+    "source-citations"  "Unpublished paper: Monovacancy properties from Automated Atomistic Simulation."
     "kim-api-version" "1.6"
     "pipeline-api-version" "1.0"
 }
