@@ -7,13 +7,12 @@ Author: Junhao Li <streaver91@gmail.com>
 
 import json
 from ase.data import chemical_symbols
-from ase.data import reference_states
 from random import randint
 
 lattices = ['fcc', 'bcc', 'sc', 'diamond', 'hcp']
 
 # Parameters for Debugging
-lattices = ['fcc']
+# lattices = ['fcc']
 # chemical_symbols = ['Al', 'Ni', 'Si']
 
 with open('test_generator.json', 'w') as f:
