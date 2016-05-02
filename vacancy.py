@@ -1,13 +1,10 @@
-# Vacancy Class Definition File For:
-# Vacancy Migration Energy (VME) and Formation Energy (VFE) Test Driver
+# Vacancy Class Definition File for Vacancy Test Driver
 # Author: Junhao Li <streaver91@gmail.com>
 
 # Python Modules
-import sys
-from scipy.optimize import fmin
+import os
 from scipy.interpolate import interp1d
 import numpy as np
-import json
 import tarfile
 
 # ASE Modules
@@ -17,17 +14,13 @@ try:
 except ImportError:
     from ase.structure import bulk
     print 'Imported bulk from ase.structure' # For ASE version <= 3.8
-from ase.optimize import FIRE, QuasiNewton, MDMin
-from ase.data import chemical_symbols
-from ase.data import reference_states
-from ase import Atoms, Atom
+from ase.optimize import FIRE, MDMin
+from ase import Atoms
 from ase.io import write
-from ase.constraints import FixAtoms
 from ase.neb import NEB
-import ase.units as units
 
 # KIM Modules
-from kimcalculator import *
+from kimcalculator import KIMCalculator
 from kimservice import KIM_API_get_data_double
 
 # Load Configuration
