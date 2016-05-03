@@ -26,7 +26,6 @@ from vacancy import Vacancy
 
 # Generate OrderedDict for all properties to report
 def packResult(res):
-    F.clock('test begin')
     print '[Packing results]'
     instanceId = 1 # Instance id start from 1
     driverPath = os.path.dirname(os.path.abspath(__file__))
@@ -70,6 +69,8 @@ def printKeyConfig():
     print 'NUM_SIZES:', C.NUM_SIZES
 
 def main():
+    F.clock('test begin')
+    
     printKeyConfig()
     # Obtain raw inputs
     elem = raw_input()
