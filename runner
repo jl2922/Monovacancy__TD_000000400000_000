@@ -92,9 +92,11 @@ def main():
     # Create Instance
     migration = C.MIGRATION
     
+    # Use migration conig from test input if exists    
     if 'migration' in testConfig:
         t = testConfig['migration']
         migration = (t['x'], t['y'], t['z'])
+
     vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
     # Obtain Results and pack them into required format
