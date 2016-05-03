@@ -18,17 +18,19 @@ METHOD
   
   The calculation consists of two steps:
   
-  1. Calculate the vacancy formation energy and relaxation volume corresponding to three different sizes of supercell.
+  1. Calculate all the quantities corresponding to three different sizes of supercell.
   The Calculation of each size starts from constructing the periodic supercell, then take out one atom from the supercell.
   Then it does the relaxation of positions within the supercell to obtain vacancy formation energy.
   After that, it moves the nearest atom to the vacanted site and calculates vacancy migration energy with nudged elastic band method.
   
   2. Extrapolate from these three results to get the value corresponding to an infinitely large supercell.
   
-  The extrapolation is based on the elastic theory, which gives the supercell effect on vacancy formation energy and migration energy are 1/r^3.
-  Therefore, we use the two larger size to fit f(x) = a0 + a1/r^3, and obtain a0, which we use as the source value.
+  The extrapolation is based on the elastic theory, which gives the supercell effect on the quantities scale as A0 + A1/r^3.
+  Therefore, we use the two larger size to fit f(x) = A0 + A1/r^3, and obtain a0, which we use as the source value.
   
-  It also estimates the uncertainty, based on: a. fitting with all the three sizes to the function above; b. minimization criteria used in positions relaxation and nudged elastic band calculation.
+  It also estimates the uncertainty, based on:
+  a. Fitting with all the three sizes to the function above;
+  b. Minimization criteria (fmax) used in positions relaxation and nudged elastic band calculation.
   
   
   
