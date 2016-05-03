@@ -68,7 +68,7 @@
     "required"     true
     "description"  "Fractional coordinates of the basis atoms in the conventional unit cell.  If the unit cell vectors are denoted by <a>, <b>, and <c>, and the fractional coordinates of atom 'i' are [afrac_i, bfrac_i, cfrac_i], the value of ‘basis-atom-coordinates' will be of the form [[afrac_1 bfrac_1 cfrac_1] [afrac_2 bfrac_2 cfrac_2] ... ].  All components of each basis atom should be between zero and one, inclusive of zero."
   }
-  "basis-species" {
+  "basis-atom-species" {
     "type"         "string"
     "has-unit"     false
     "extent"       [":"]
