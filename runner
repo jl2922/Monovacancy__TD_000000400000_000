@@ -78,7 +78,10 @@ def main():
     model = raw_input()
     latticeConstA = raw_input()
     latticeConstC = raw_input()
-
+    testConfig = raw_input()
+    testConfig = json.loads(testConfig)
+    print json.dumps(testConfig, indent = 2)
+    
     # If it's hcp crystal, process both a and c
     # Otherwise, process a only
     if lattice == 'hcp':
@@ -96,9 +99,11 @@ def main():
     instances = packResult(res)
 
     # Output results
+    # Output pipeline edn 'json' file
     insEdn = json.dumps(instances, separators = (' ',' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(insEdn)
+    # Output usual json file with all the information
     if C.SAVE_JSON:
         res['info'] = {
             'model': model,
