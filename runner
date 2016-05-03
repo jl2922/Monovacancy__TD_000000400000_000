@@ -26,6 +26,7 @@ from vacancy import Vacancy
 
 # Generate OrderedDict for all properties to report
 def packResult(res):
+    F.clock('test begin')
     print '[Packing results]'
     instanceId = 1 # Instance id start from 1
     driverPath = os.path.dirname(os.path.abspath(__file__))
