@@ -196,7 +196,7 @@ class Vacancy(object):
         print 'atom #%d moved from ' % movedAtomId, finalPositions[movedAtomId]
         finalPositions[movedAtomId] = np.array([0.0, 0.0, 0.0])
         final.set_positions(finalPositions)
-        self._saveAtoms('unrelaxedFinal%d' % nAtoms, initial)
+        self._saveAtoms('unrelaxedFinal%d' % nAtoms, final)
 
         # Relax both images
         initial.set_calculator(KIMCalculator(self.model))
@@ -206,7 +206,7 @@ class Vacancy(object):
         final.set_calculator(KIMCalculator(self.model))
         tmp = self._relaxAtoms(final)
         assert tmp, 'Maximum FIRE Steps Reached. (final)'
-        self._saveAtoms('relaxedFinal%d' % nAtoms, initial)
+        self._saveAtoms('relaxedFinal%d' % nAtoms, final)
 
         return initial, final
 
@@ -331,7 +331,10 @@ class Vacancy(object):
         VFE = en1 - en0 * (nAtoms - 1) / nAtoms  # vacancy formation energy
         nd = 1.0 / supercell.get_volume()  # defect concentration
         stress0 = self._getStressTensor(supercell)
+        print 'STRESS:'
+        print stress0
         stress1 = self._getStressTensor(initial)
+        print stress1
         EDT = (stress1 - stress0) / nd  # elastic dipole tensor
         DST = self._getDefectStrainTensor(EDT)  # defect strain tensor
         VRV = np.trace(DST)  # vacancy relaxation volume
