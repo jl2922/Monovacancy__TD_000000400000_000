@@ -13,6 +13,7 @@ EPS = 1.0e-6
 STRESS_DX = 1.0e-3
 NUM_SIZES = 3
 MIGRATION = (0.25, 0.25, 0.25)
+STRAIN = (0.0, 0.0, 0.0)
 
 # Parameters for Debugging
 if DEBUG == 1:

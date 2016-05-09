@@ -3,7 +3,8 @@
 
 # Python Modules
 import os
-from scipy.interpolate import interp1d
+import sys
+from scipy import interpolate
 import numpy as np
 import tarfile
 
@@ -55,6 +56,7 @@ class Vacancy(object):
         self.latticeConsts = np.array(latticeConsts)
         self.migration = np.array(migration) # Vacancy migration vector
         self._printInputs()
+        self.strain = np.array(C.STRAIN)
 
         # For storing results object
         self._res = {}
@@ -104,6 +106,7 @@ class Vacancy(object):
                 pbc = [1, 1, 1]
             )
             basis.set_cell(np.array([a, a * rt3, c]), scale_atoms = True)
+            basis.set_cell(basis.get_cell() * (1 + self.strain), scale_atoms = True)
             res['a'] = _format(a, 'angstrom')
             res['b'] = _format(a, 'angstrom')
             res['c'] = _format(c, 'angstrom')
@@ -121,6 +124,9 @@ class Vacancy(object):
                 crystalstructure = lattice,
                 cubic = True,
             )
+            print basis.get_cell()
+            basis.set_cell(basis.get_cell() * (1 + self.strain), scale_atoms = True)
+            print basis.get_cell()
             res['a'] = _format(a, 'angstrom')
             res['b'] = _format(a, 'angstrom')
             res['c'] = _format(a, 'angstrom')
@@ -226,8 +232,8 @@ class Vacancy(object):
         x = np.arange(0, nImages, 1.0)
         y = np.array([image.get_potential_energy() for image in images])
         pos = np.array([image.get_positions() for image in images])
-        fy = interp1d(x, y, kind = 'cubic')
-        fpos = interp1d(x, pos, kind = 'cubic', axis = 0)
+        fy = interpolate.interp1d(x, y, kind = 'cubic')
+        fpos = interpolate.interp1d(x, pos, kind = 'cubic', axis = 0)
         xmax = F.fmax_jh(fy, x[xmid], ftol = 1.0e-10)[0]
         saddleImage = images[0].copy()
         saddleImage.set_positions(fpos(xmax))
