@@ -100,7 +100,7 @@ def main():
 
     if 'bulkStrain' in testConfig:
         t = testConfig['bulkStrain']
-        bulkStrain = (t['x', t['y'], t['z'])
+        bulkStrain = (t['x'], t['y'], t['z'])
 
     vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
@@ -123,7 +123,8 @@ def main():
             'fmax': C.FMAX_TOL,
             'neb-points': C.NEB_POINTS,
             'num-sizes': C.NUM_SIZES,
-            'min-atoms': C.MIN_ATOMS
+            'min-atoms': C.MIN_ATOMS,
+            'bulk-strain': bulkStrain
         }
         resJson = json.dumps(res, indent = 2)
         with open(os.path.abspath('output/summary.json'), 'w') as f:
