@@ -17,7 +17,7 @@ STRAIN = (0.20, 0.20, 0.0)
 
 # Parameters for Debugging
 if DEBUG == 1:
-    FMAX_TOL = 50.0e-3 # absolute
+    FMAX_TOL = 10.0e-3 # absolute
     NEB_POINTS = 12
     MIN_ATOMS = 100
     FIRE_MAX_STEPS = 2000
