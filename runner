@@ -102,7 +102,7 @@ def main():
         t = testConfig['bulkStrain']
         bulkStrain = (t['x'], t['y'], t['z'])
 
-    vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
+    vacancy = Vacancy(elem, model, lattice, latticeConsts, migration, bulkStrain)
 
     # Obtain Results and pack them into required format
     vacancy.run()
