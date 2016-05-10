@@ -128,6 +128,7 @@ class Vacancy(object):
             print basis.get_cell()
             basis.set_cell(basis.get_cell() * (1 + self.strain), scale_atoms = True)
             print basis.get_cell()
+            cell = basis.get_cell()
             res['a'] = _format(np.linalg.norm(cell[0]), 'angstrom')
             res['b'] = _format(np.linalg.norm(cell[1]), 'angstrom')
             res['c'] = _format(np.linalg.norm(cell[2]), 'angstrom')
