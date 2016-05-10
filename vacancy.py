@@ -44,7 +44,7 @@ def _format(value, unit = '', uncert = ''):
 
 class Vacancy(object):
     # Class for calculating vacancy formation energy and relaxation volume
-    def __init__(self, elem, model, lattice, latticeConsts, migration):
+    def __init__(self, elem, model, lattice, latticeConsts, migration, bulkStrain):
         # Inputs description:
         # latticeConsts specified in angstrom
         # migration vector specified in fractional coordinates
@@ -56,7 +56,7 @@ class Vacancy(object):
         self.latticeConsts = np.array(latticeConsts)
         self.migration = np.array(migration) # Vacancy migration vector
         self._printInputs()
-        self.strain = np.array(C.STRAIN)
+        self.strain = np.array(bulkStrain)
 
         # For storing results object
         self._res = {}

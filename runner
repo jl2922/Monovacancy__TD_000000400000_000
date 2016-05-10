@@ -70,7 +70,7 @@ def printKeyConfig():
 
 def main():
     F.clock('test begin')
-    
+
     printKeyConfig()
     # Obtain raw inputs
     elem = raw_input()
@@ -81,7 +81,7 @@ def main():
     testConfig = raw_input()
     testConfig = json.loads(testConfig)
     print json.dumps(testConfig, indent = 2)
-    
+
     # If it's hcp crystal, process both a and c
     # Otherwise, process a only
     if lattice == 'hcp':
@@ -91,11 +91,16 @@ def main():
 
     # Create Instance
     migration = C.MIGRATION
-    
+    bulkStrain = C.STRAIN
+
     # Use migration conig from test input if exists    
     if 'migration' in testConfig:
         t = testConfig['migration']
         migration = (t['x'], t['y'], t['z'])
+
+    if 'bulkStrain' in testConfig:
+        t = testConfig['bulkStrain']
+        bulkStrain = (t['x', t['y'], t['z'])
 
     vacancy = Vacancy(elem, model, lattice, latticeConsts, migration)
 
