@@ -61,26 +61,18 @@ def packResult(res):
         instanceId += 1
     return instances
 
-def printKeyConfig():
-    print '[Config]'
-    print 'FMAX_TOL:', C.FMAX_TOL
-    print 'NEB_POINTS:', C.NEB_POINTS
-    print 'MIN_ATOMS:', C.MIN_ATOMS
-    print 'NUM_SIZES:', C.NUM_SIZES
-
 def main():
     F.clock('test begin')
 
-    printKeyConfig()
     # Obtain raw inputs
     elem = raw_input()
     lattice = raw_input()
     model = raw_input()
     latticeConstA = raw_input()
     latticeConstC = raw_input()
-    testConfig = raw_input()
-    testConfig = json.loads(testConfig)
-    print json.dumps(testConfig, indent = 2)
+    options = raw_input()
+    options = json.loads(options)
+    print json.dumps(options, indent = 2)
 
     # If it's hcp crystal, process both a and c
     # Otherwise, process a only
@@ -89,20 +81,7 @@ def main():
     else:
         latticeConsts = [float(latticeConstA)]
 
-    # Create Instance
-    migration = C.MIGRATION
-    bulkStrain = C.STRAIN
-
-    # Use migration conig from test input if exists    
-    if 'migration' in testConfig:
-        t = testConfig['migration']
-        migration = (t['x'], t['y'], t['z'])
-
-    if 'bulkStrain' in testConfig:
-        t = testConfig['bulkStrain']
-        bulkStrain = (t['x'], t['y'], t['z'])
-
-    vacancy = Vacancy(elem, model, lattice, latticeConsts, migration, bulkStrain)
+    vacancy = Vacancy(elem, model, lattice, latticeConsts, options)
 
     # Obtain Results and pack them into required format
     vacancy.run()
@@ -114,18 +93,9 @@ def main():
     insEdn = json.dumps(instances, separators = (' ',' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
         f.write(insEdn)
+        
     # Output usual json file with all the information
     if C.SAVE_JSON:
-        res['info'] = {
-            'model': model,
-            'lattice': lattice,
-            'elem': elem,
-            'fmax': C.FMAX_TOL,
-            'neb-points': C.NEB_POINTS,
-            'num-sizes': C.NUM_SIZES,
-            'min-atoms': C.MIN_ATOMS,
-            'bulk-strain': bulkStrain
-        }
         resJson = json.dumps(res, indent = 2)
         with open(os.path.abspath('output/summary.json'), 'w') as f:
             f.write(resJson)

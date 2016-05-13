@@ -44,7 +44,7 @@ def _format(value, unit = '', uncert = ''):
 
 class Vacancy(object):
     # Class for calculating vacancy formation energy and relaxation volume
-    def __init__(self, elem, model, lattice, latticeConsts, migration, bulkStrain):
+    def __init__(self, elem, model, lattice, latticeConsts, options):
         # Inputs description:
         # latticeConsts specified in angstrom
         # migration vector specified in fractional coordinates
@@ -54,9 +54,16 @@ class Vacancy(object):
         self.model = model
         self.lattice = lattice
         self.latticeConsts = np.array(latticeConsts)
-        self.migration = np.array(migration) # Vacancy migration vector
+        self.options = options
         self._printInputs()
-        self.strain = np.array(bulkStrain)
+
+        # Test configs overrides driver configs
+        for key, val in options.iteritems():
+            setattr(C, key, val)
+
+        # Convert to numpy array
+        self.strain = np.array(C.STRAIN)
+        self.migration = np.array(C.MIGRATION)
 
         # For storing results object
         self._res = {}
@@ -74,7 +81,7 @@ class Vacancy(object):
         print 'Model: ', self.model
         print 'Lattice: ', self.lattice
         print 'Lattice Constants: ', self.latticeConsts
-        print 'Migration Vector:', self.migration
+        print 'Options:', self.options
 
     def _createBasis(self):
         # Create basic atoms
@@ -529,6 +536,8 @@ class Vacancy(object):
 
         self._extrapolate(sizes, sizeResults)
 
+        self._addInfo()
+
     def _saveAtoms(self, filename, atoms):
         path = 'output/%s.cif' % filename
         self._cifs.append(path)
@@ -566,7 +575,18 @@ class Vacancy(object):
         res['vacancy-short-name-start'] = _format('')
         res['cauchy-stress'] = _format(self.stress0[C.voigtEncode], 'GPa')
         res['temperature'] = _format(0.0, 'K')
-
+        res['info'] = {
+            'model': self.model,
+            'lattice': self.lattice,
+            'latticeConsts': self.latticeConsts.tolist(),
+            'elem': self.elem,
+            'fmax': C.FMAX_TOL,
+            'neb-points': C.NEB_POINTS,
+            'num-sizes': C.NUM_SIZES,
+            'min-atoms': C.MIN_ATOMS,
+            'strain': C.STRAIN,
+            'migration': C.MIGRATION
+        }
         self._packStructure()
 
         aliases = C.ALIASES
@@ -579,5 +599,4 @@ class Vacancy(object):
             res[aliasName] = res[originalName]
 
     def getResult(self):
-        self._addInfo()
         return self._res
