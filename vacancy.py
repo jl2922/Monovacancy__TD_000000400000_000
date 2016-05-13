@@ -332,9 +332,15 @@ class Vacancy(object):
         en1 = initial.get_potential_energy()
         VFE = en1 - en0 * (nAtoms - 1) / nAtoms  # vacancy formation energy
         nd = 1.0 / supercell.get_volume()  # defect concentration
-        stress0 = self._getStressTensor(supercell)
+
+        # Obtain bulk stress
+        if not hasattr(self, 'stressTensor'):
+            self.stress0 = self._getStressTensor(supercell)
+
+        stress0 = self.stress0
         print 'STRESS:'
         print stress0
+
         stress1 = self._getStressTensor(initial)
         print stress1
         EDT = (stress1 - stress0) / nd  # elastic dipole tensor
@@ -558,7 +564,7 @@ class Vacancy(object):
         res['vacancy-position-end'] = _format(self.migration)
         res['vacancy-position-saddle-point'] = _format(self.migration / 2)
         res['vacancy-short-name-start'] = _format('')
-        res['cauchy-stress'] = _format(np.zeros(6), 'GPa')
+        res['cauchy-stress'] = _format(self.stress0[C.voigtEncode], 'GPa')
         res['temperature'] = _format(0.0, 'K')
 
         self._packStructure()

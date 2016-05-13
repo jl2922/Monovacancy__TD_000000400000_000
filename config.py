@@ -38,6 +38,7 @@ OUTPUT_INSTANCES = False
 eV = 1.602176565e-19
 angstrom = 1.0e-10
 toGPa = eV / angstrom**3 / 1.0e9 # Convert eV to GPa
+voigtEncode = ((0, 1, 2, 1, 2), (0, 1, 2, 0, 0))
 
 # Output information
 SPACE_GROUPS = {
