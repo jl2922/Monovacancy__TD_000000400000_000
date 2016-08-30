@@ -4,7 +4,7 @@
 DEBUG = 1
 
 # Accuracy related parameters
-FMAX_TOL = 1.0e-3 # absolute
+FMAX_TOL = 2.0e-3 # absolute
 FIRE_MAX_STEPS = 500
 MDMIN_MAX_STEPS = 500
 MIN_ATOMS = 100
@@ -13,7 +13,7 @@ EPS = 1.0e-6
 STRESS_DX = 1.0e-3
 NUM_SIZES = 3
 MIGRATION = (0.5, 0.5, 0.0)
-STRAIN = (0.20, 0.20, 0.0)
+STRAIN = (0.0, 0.0, 0.0)
 
 # Parameters for Debugging
 if DEBUG == 1:

@@ -1,8 +1,8 @@
 {
-    "title"         "VacancyFormationMigration_{{lattice}}_{{elem}}{# FILENAME = kimspec.edn #}"
+    "title"         "MonovacancyProperties_{{lattice}}_{{elem}}{# FILENAME = kimspec.edn #}"
     "test-driver"   "{{TEST_DRIVER_NAME}}"
     "species"       "{{elem}}"
-    "extended-id"   "VacancyFormationMigration_{{lattice}}_{{elem}}__TE_{{kimnum}}_{{version}}"
+    "extended-id"   "MonovacancyProperties_{{lattice}}_{{elem}}__TE_{{kimnum}}_{{version}}"
     "disclaimer"    "Computer generated"
     "domain"        "openkim.org"
     "executables"   ["runner"]

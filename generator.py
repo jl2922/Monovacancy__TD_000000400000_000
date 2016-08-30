@@ -12,8 +12,8 @@ from random import randint
 lattices = ['fcc', 'bcc', 'sc', 'diamond', 'hcp']
 
 # Parameters for Debugging
-# lattices = ['fcc']
-# chemical_symbols = ['Al', 'Ni', 'Si']
+lattices = ['fcc']
+# chemical_symbols = ['Al']
 
 with open('test_generator.json', 'w') as f:
     for pk, elem in enumerate(chemical_symbols):
