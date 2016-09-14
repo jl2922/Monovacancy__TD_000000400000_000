@@ -3,7 +3,7 @@
 
 # Python Modules
 import os
-import sys
+import sys # For debug.
 from scipy import interpolate
 import numpy as np
 import tarfile
@@ -11,10 +11,10 @@ import tarfile
 # ASE Modules
 try:
     from ase.lattice import bulk
-    print 'Imported bulk from ase.lattice' # For ASE version 3.9
+    print 'Imported bulk from ase.lattice' # For ASE version 3.9.
 except ImportError:
     from ase.structure import bulk
-    print 'Imported bulk from ase.structure' # For ASE version <= 3.8
+    print 'Imported bulk from ase.structure' # For ASE version <= 3.8.
 from ase.optimize import FIRE, MDMin
 from ase import Atoms
 from ase.io import write
@@ -22,56 +22,50 @@ from ase.neb import NEB
 
 # KIM Modules
 from kimcalculator import KIMCalculator
-from kimservice import KIM_API_get_data_double
 
-# Load Configuration
-import config as C
 import functions as F
 
-def _format(value, unit = '', uncert = ''):
+# Build dict according to KIM result format.
+def _format(value, unit = None, uncert = None):
     if type(value) == np.ndarray:
         value = value.tolist()
-    res = {
+    dictResult = {
         'source-value': value
     }
-    if unit != '':
-        res['source-unit'] = unit
-    if uncert != '':
+    if unit is not None:
+        dictResult['source-unit'] = unit
+    if uncert is not None:
         if type(uncert) == np.ndarray:
             uncert = uncert.tolist()
-        res['source-std-uncert-value'] = uncert
-    return res
+        dictResult['source-std-uncert-value'] = uncert
+    return dictResult
 
 class Vacancy(object):
-    # Class for calculating vacancy formation energy and relaxation volume
-    def __init__(self, elem, model, lattice, latticeConsts, options):
+    # Class for calculating vacancy formation energy and relaxation volume.
+    def __init__(self, elem, model, lattice, latticeConsts, configs):
         # Inputs description:
-        # latticeConsts specified in angstrom
-        # migration vector specified in fractional coordinates
+        # latticeConsts specified in angstrom.
+        # migration vector specified in fractional coordinates.
 
         # Process Inputs
         self.elem = elem
         self.model = model
         self.lattice = lattice
         self.latticeConsts = np.array(latticeConsts)
-        self.options = options
+        self.configs = configs
         self._printInputs()
 
-        # Test configs overrides driver configs
-        for key, val in options.iteritems():
-            setattr(C, key, val)
+        # Convert to numpy array.
+        self.strain = np.array(configs['STRAIN'])
+        self.migration = np.array(configs['MIGRATION'])
 
-        # Convert to numpy array
-        self.strain = np.array(C.STRAIN)
-        self.migration = np.array(C.MIGRATION)
-
-        # For storing results object
+        # For storing results object.
         self._res = {}
 
-        # Create basis for constructing supercell
+        # Create basis for constructing supercell.
         self.basis = self._createBasis()
 
-        # For storing cif file paths to be compressed
+        # For storing cif file paths to be compressed.
         self._cifs = []
 
     def _printInputs(self):
@@ -81,7 +75,7 @@ class Vacancy(object):
         print 'Model: ', self.model
         print 'Lattice: ', self.lattice
         print 'Lattice Constants: ', self.latticeConsts
-        print 'Options:', self.options
+        print 'Configs:', self.configs
 
     def _createBasis(self):
         # Create basic atoms
@@ -148,12 +142,12 @@ class Vacancy(object):
             res['basis-atom-species'] = _format([elem] * basisNAtoms)
 
         res['basis-short-name'] = _format([lattice])
-        res['space-group'] = _format(C.SPACE_GROUPS[lattice])
-        res['wyckoff-multiplicity-and-letter'] = _format(C.WYCKOFF_CODES[lattice])
-        res['wyckoff-coordinates'] = _format(C.WYCKOFF_SITES[lattice])
+        res['space-group'] = _format(self.configs['SPACE_GROUPS'][lattice])
+        res['wyckoff-multiplicity-and-letter'] = _format(self.configs['WYCKOFF_CODES'][lattice])
+        res['wyckoff-coordinates'] = _format(self.configs['WYCKOFF_SITES'][lattice])
         res['wyckoff-species'] = _format([elem])
 
-        if C.SAVE_BASIS == True:
+        if self.configs['SAVE_BASIS'] == True:
             write('output/basis.cif', basis, format = 'cif')
         return basis
 
@@ -164,23 +158,35 @@ class Vacancy(object):
         supercell *= (size, size, size)
         return supercell
 
-    def _relaxAtoms(self, atoms, tol = C.FMAX_TOL, steps = C.FIRE_MAX_STEPS):
+    def _relaxAtoms(self, atoms, tol = None, steps = None):
+        # Set default value.
+        if tol is None:
+            tol = self.configs['FMAX_TOL']
+        if steps is None:
+            steps = self.configs['FIRE_MAX_STEPS']
+
         # Relax atoms with FIRE algorithm
-        fire = FIRE(atoms, logfile = C.FIRE_LOGFILE)
+        fire = FIRE(atoms, logfile = self.configs['FIRE_LOGFILE'])
         fire.run(fmax = tol, steps = steps)
         fireSteps = fire.get_number_of_steps()
         print 'fire finished in %d steps' % fireSteps
         return fireSteps < steps
 
-    def _relaxPath(self, images, tol = C.FMAX_TOL, steps = C.MDMIN_MAX_STEPS):
+    def _relaxPath(self, images, tol = None, steps = None):
+        # Set default values.
+        if tol is None:
+            tol = self.configs['FMAX_TOL']
+        if steps is None:
+            steps = self.configs['MDMIN_MAX_STEPS']
+
         # Relax migration path with nudged elastic band
         neb = NEB(images)
         neb.interpolate()
-        mdmin = MDMin(neb, logfile = C.MDMIN_LOGFILE)
+        mdmin = MDMin(neb, logfile = self.configs['MDMIN_LOGFILE'])
         mdmin.run(fmax = tol, steps = steps)
         mdminSetps = mdmin.get_number_of_steps()
         print 'mdmin finished in %d steps' % mdminSetps
-        return mdminSetps < C.MDMIN_MAX_STEPS
+        return mdminSetps < self.configs['MDMIN_MAX_STEPS']
 
     def _findAtomId(self, positions, position):
         # Find the id of positions closest to position
@@ -222,7 +228,7 @@ class Vacancy(object):
     def _getImages(self, initial, final):
         # Create and relax Interpolated images between initial and final
         images = []
-        for i in range(C.NEB_POINTS):
+        for i in range(self.configs['NEB_POINTS']):
             image = initial.copy()
             image.set_calculator(KIMCalculator(self.model))
             images.append(image)
@@ -363,8 +369,8 @@ class Vacancy(object):
         # Refine results with high precision for a few more steps
         initialRefined = initial.copy()
         initialRefined.set_calculator(KIMCalculator(self.model))
-        self._relaxAtoms(initialRefined, tol = C.FMAX_TOL * C.EPS, steps = 5)
-        self._relaxPath(images, tol = C.FMAX_TOL * C.EPS, steps = 5)
+        self._relaxAtoms(initialRefined, tol = self.configs['FMAX_TOL'] * self.configs['EPS'], steps = 5)
+        self._relaxPath(images, tol = self.configs['FMAX_TOL'] * self.configs['EPS'], steps = 5)
         F.clock('results refined')
 
         # Record refined values
@@ -512,8 +518,8 @@ class Vacancy(object):
     def run(self):
         # Determine sizes of the supercell
         nBasisAtoms = self.basis.get_number_of_atoms()
-        minSize = np.ceil(np.power(C.MIN_ATOMS * 1.0 / nBasisAtoms, 0.333))
-        sizes = np.arange(minSize, minSize + C.NUM_SIZES, 1.0)
+        minSize = np.ceil(np.power(self.configs['MIN_ATOMS'] * 1.0 / nBasisAtoms, 0.333))
+        sizes = np.arange(minSize, minSize + self.configs['NUM_SIZES'], 1.0)
 
         # Obtain common variables
         supercell = self._createSupercell(minSize.astype(int))
@@ -573,23 +579,23 @@ class Vacancy(object):
         res['vacancy-position-end'] = _format(self.migration)
         res['vacancy-position-saddle-point'] = _format(self.migration / 2)
         res['vacancy-short-name-start'] = _format('')
-        res['cauchy-stress'] = _format(self.stress0[C.voigtEncode], 'GPa')
+        res['cauchy-stress'] = _format(self.stress0[self.configs['voigtEncode']], 'GPa')
         res['temperature'] = _format(0.0, 'K')
         res['info'] = {
             'model': self.model,
             'lattice': self.lattice,
             'latticeConsts': self.latticeConsts.tolist(),
             'elem': self.elem,
-            'fmax': C.FMAX_TOL,
-            'neb-points': C.NEB_POINTS,
-            'num-sizes': C.NUM_SIZES,
-            'min-atoms': C.MIN_ATOMS,
-            'strain': C.STRAIN,
-            'migration': C.MIGRATION
+            'fmax': self.configs['FMAX_TOL'],
+            'neb-points': self.configs['NEB_POINTS'],
+            'num-sizes': self.configs['NUM_SIZES'],
+            'min-atoms': self.configs['MIN_ATOMS'],
+            'strain': self.configs['STRAIN'],
+            'migration': self.configs['MIGRATION']
         }
         self._packStructure()
 
-        aliases = C.ALIASES
+        aliases = self.configs['ALIASES']
         for key in res:
             # Static vacancy structure same as migration start
             if key[-6:] == '-start':

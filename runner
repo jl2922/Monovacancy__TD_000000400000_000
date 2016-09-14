@@ -7,11 +7,6 @@ This test driver first performs calculation with several fixed size supercells,
 then extrapolates these results to obtain the dilute limit.
 Migration is obtained with nudged elastic band method.
 
-2016-04-06 Junhao Li <streaver91@gmail.com>
-* Change the output format to conform with the new property definition.
-* Add the calculation of relaxation volume and elastic multipoles.
-* Change the version number to 001
-
 Author: Junhao Li <streaver91@gmail.com>
 """
 # Python Modules
@@ -19,44 +14,48 @@ import re
 import json
 import os
 
-# Vacancy Driver Modules
+# Vacancy driver modules
 import config as C
 import functions as F
 from vacancy import Vacancy
 
-# Generate OrderedDict for all properties to report
-def packResult(res):
+# Generate OrderedDict for all properties to report.
+def packResult(result, configs):
     print '[Packing results]'
-    instanceId = 1 # Instance id start from 1
+    instanceId = 1 # Instance id start from 1.
     driverPath = os.path.dirname(os.path.abspath(__file__))
     instances = []
-    # Loop through each property definition
-    for pd in C.PROPERTY_DEFINITIONS:
-        print 'packing results for: ' + pd
+
+    # Loop through each property definition.
+    for definition in C.PROPERTY_DEFINITIONS:
+        print 'packing results for: ' + definition
         instance = {
             'instance-id': instanceId
         }
-        with open(driverPath + ('/definitions/%s.edn' % pd), 'r') as f:
+
+        with open(driverPath + ('/definitions/%s.edn' % definition), 'r') as f:
             content = f.read()
-            # Obtain property id
-            tmp = re.search('property-id\" \"([^\"]+)\"', content, re.M)
-            propertyId = tmp.group(1)
+            # Obtain property id.
+            properties = re.search('property-id\" \"([^\"]+)\"', content, re.M)
+            propertyId = properties.group(1)
             instance['property-id'] = propertyId
             # Obtain property keys
-            tmp = re.findall('\"([^\"]+)\" \{', content)
-            for prop in tmp:
-                resKey = prop # corresponding key in res object
-                if prop[:5] == 'host-':
-                    resKey = prop[5:]
-                elif prop[:10] == 'reservoir-':
-                    resKey = prop[10:]
-                if resKey in res:
-                    instance[prop] = res[resKey]
+            properties = re.findall('\"([^\"]+)\" \{', content)
+            for property in properties:
+                propertyKey = property # corresponding key in res object.
+                if property[:5] == 'host-':
+                    propertyKey = property[5:]
+                elif property[:10] == 'reservoir-':
+                    propertyKey = property[10:]
+                if propertyKey in result:
+                    instance[property] = result[propertyKey]
                 else:
-                    print 'missing:', prop
-        if C.OUTPUT_INSTANCES:
+                    print 'missing:', property
+
+        if configs['OUTPUT_INSTANCES']:
             print 'results:'
             F.printDict(instance)
+
         instances.append(instance)
         instanceId += 1
     return instances
@@ -64,41 +63,50 @@ def packResult(res):
 def main():
     F.clock('test begin')
 
-    # Obtain raw inputs
+    # Obtain raw inputs.
     elem = raw_input()
     lattice = raw_input()
     model = raw_input()
     latticeConstA = raw_input()
     latticeConstC = raw_input()
-    options = raw_input()
-    options = json.loads(options)
-    print json.dumps(options, indent = 2)
+    testConfigs = raw_input()
 
-    # If it's hcp crystal, process both a and c
-    # Otherwise, process a only
+    # Parse and output test config.
+    testConfigs = json.loads(testConfigs)
+    print "Test config:"
+    print json.dumps(testConfigs, indent = 2)
+
+    # Test configs overwrite driver default configs.
+    configs = C.__dict__.copy() # C contains driver default configs.
+    configs = dict((name, getattr(C, name)) for name in dir(C) if not name.startswith('__'))
+    configs.update(testConfigs)
+    print configs
+
+    # If it's hcp crystal, process both a and c.
+    # Otherwise, process a only.
     if lattice == 'hcp':
         latticeConsts = [float(latticeConstA), float(latticeConstC)]
     else:
         latticeConsts = [float(latticeConstA)]
 
-    vacancy = Vacancy(elem, model, lattice, latticeConsts, options)
+    vacancy = Vacancy(elem, model, lattice, latticeConsts, configs)
 
-    # Obtain Results and pack them into required format
+    # Obtain Results and pack them into required format.
     vacancy.run()
-    res = vacancy.getResult()
-    instances = packResult(res)
+    result = vacancy.getResult()
+    instances = packResult(result, configs)
 
-    # Output results
-    # Output pipeline edn 'json' file
-    insEdn = json.dumps(instances, separators = (' ',' '), indent = 2)
+    # Output results.
+    # Output pipeline edn 'json' file.
+    instanceEdn = json.dumps(instances, separators = (' ', ' '), indent = 2)
     with open(os.path.abspath('output/results.edn'), 'w') as f:
-        f.write(insEdn)
+        f.write(instanceEdn)
         
-    # Output usual json file with all the information
-    if C.SAVE_JSON:
-        resJson = json.dumps(res, indent = 2)
+    # Output usual json file with all the information.
+    if configs['SAVE_JSON']:
+        resultJson = json.dumps(result, indent = 2)
         with open(os.path.abspath('output/summary.json'), 'w') as f:
-            f.write(resJson)
+            f.write(resultJson)
 
     F.clock('test completed')
 
