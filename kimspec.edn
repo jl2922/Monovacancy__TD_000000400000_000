@@ -2,8 +2,8 @@
     "description"   "Computes monovacancy migration and formation energy."
     "disclaimer"    "Computes monovacancy migration and formation energy."
     "domain"        "openkim.org"
-    "extended-id"   "VacancyFormationMigration__TD_554849987965_001"
-    "title"         "vacancy migration and formation energy for cubic and hcp crystals"
+    "extended-id"   "Monovacancy__TD_00000400000_000"
+    "title"         "vacancy migration and formation properties for cubic and hcp crystals"
     "executables"   ["runner" "test_template/runner"]
     "source-citations"  "Unpublished paper: Monovacancy Properties from Automated Atomistic Simulation."
     "kim-api-version" "1.6"
