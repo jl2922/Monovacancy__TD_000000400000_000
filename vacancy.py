@@ -208,14 +208,18 @@ class Vacancy(object):
         cellSize = np.diagonal(self.basis.get_cell())
         migration = cellSize * np.array(self.migration)
         movedAtomId = self._findAtomId(finalPositions, migration)
-        print 'atom #%d moved from ' % movedAtomId, finalPositions[movedAtomId]
+        print 'Atom #%d moved from ' % movedAtomId, finalPositions[movedAtomId]
         finalPositions[movedAtomId] = np.array([0.0, 0.0, 0.0])
         final.set_positions(finalPositions)
         self._saveAtoms('unrelaxedFinal%d' % nAtoms, final)
 
         # Relax both images
         initial.set_calculator(KIMCalculator(self.model))
+        print 'Unrelaxed potential energy:', initial.get_potential_energy()
+        print 'Nearest neighbor unrelaxed position:', initial[0]
         tmp = self._relaxAtoms(initial)
+        print 'Relaxed potential energy:', initial.get_potential_energy()
+        print 'Nearest neighbor relaxed position:', initial[0]
         assert tmp, 'Maximum FIRE Steps Reached (initial).'
         self._saveAtoms('relaxedInitial%d' % nAtoms, initial)
         final.set_calculator(KIMCalculator(self.model))
